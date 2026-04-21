@@ -6,9 +6,13 @@ export default function SetterManual() {
     <PageShell tone="setter" title="Setter Portal">
       <div className="mx-auto max-w-3xl space-y-6">
         <div className="rounded-2xl gradient-setter p-6 text-setter-foreground shadow-glow">
-          <h1 className="font-display text-3xl font-semibold">Setter Manual</h1>
-          <p className="mt-1 text-sm opacity-90">Everything you need to design, score, publish and analyse a career inventory for your students.</p>
+          <h1 className="font-display text-3xl font-semibold">LASS Career Path · Counsellor Manual</h1>
+          <p className="mt-1 text-sm opacity-90">The school counsellor account (<strong>counsellor@lightacademy.ac.ug</strong>) is the only setter for this site. Use this manual to design, score, publish and review the Light Academy career inventory.</p>
         </div>
+
+        <Section icon={<Sparkles className="h-5 w-5" />} title="0. About this build">
+          Students self-register with their <strong>name, class and stream</strong>. Only the counsellor account can edit questionnaires and view results. Use the <strong>Results</strong> link in the header to see all submissions, filtered by class and stream.
+        </Section>
 
         <Section icon={<FileQuestion className="h-5 w-5" />} title="1. Create a questionnaire">
           From your dashboard, click <strong>New Questionnaire</strong>. You'll land in the editor with 4 tabs: <em>Details, Content, Clusters, Weights</em>. Edits autosave as you type. There's also a pre-built sample called <strong>“Light Academy Career Inventory”</strong> you can study or duplicate.
