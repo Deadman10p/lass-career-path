@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Compass, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+const COUNSELLOR_EMAIL = "counsellor@lightacademy.ac.ug";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -25,10 +28,13 @@ export default function Login() {
       setLoading(false);
       return;
     }
-    // Look up role to redirect
-    const { data: profile } = await supabase
-      .from("profiles").select("role").eq("user_id", data.user.id).maybeSingle();
-    const dest = from && from !== "/" ? from : (profile?.role === "setter" ? "/setter/dashboard" : "/student/dashboard");
+    const isCounsellor = data.user.email?.toLowerCase() === COUNSELLOR_EMAIL;
+    const dest =
+      from && from !== "/"
+        ? from
+        : isCounsellor
+        ? "/setter/dashboard"
+        : "/student/dashboard";
     toast.success("Welcome back!");
     navigate(dest, { replace: true });
   };
@@ -36,15 +42,13 @@ export default function Login() {
   return (
     <div className="flex min-h-screen items-center justify-center gradient-soft p-4">
       <motion.div
-        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
-        <Link to="/" className="mb-6 flex items-center justify-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl gradient-primary shadow-glow">
-            <Compass className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <span className="font-display text-lg font-semibold">CareerPath</span>
+        <Link to="/" className="mb-6 flex justify-center">
+          <Logo />
         </Link>
         <div className="rounded-2xl border border-border bg-card p-6 shadow-card sm:p-8">
           <h1 className="font-display text-2xl font-semibold">Welcome back</h1>
@@ -63,7 +67,10 @@ export default function Login() {
             </Button>
           </form>
           <p className="mt-5 text-center text-sm text-muted-foreground">
-            New here? <Link to="/register" className="font-medium text-primary hover:underline">Create an account</Link>
+            New here?{" "}
+            <Link to="/register" className="font-medium text-brand-red hover:underline">
+              Create a student account
+            </Link>
           </p>
         </div>
       </motion.div>

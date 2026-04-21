@@ -13,6 +13,7 @@ import SetterDashboard from "./pages/setter/SetterDashboard.tsx";
 import QuestionnaireEditor from "./pages/setter/QuestionnaireEditor.tsx";
 import Analytics from "./pages/setter/Analytics.tsx";
 import SetterManual from "./pages/setter/SetterManual.tsx";
+import SetterResults from "./pages/setter/SetterResults.tsx";
 import StudentDashboard from "./pages/student/StudentDashboard.tsx";
 import QuestionnaireTake from "./pages/student/QuestionnaireTake.tsx";
 import ResultsPage from "./pages/student/ResultsPage.tsx";
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/register" element={<Register />} />
 
             <Route path="/setter/dashboard" element={<ProtectedRoute requireRole="setter"><SetterDashboard /></ProtectedRoute>} />
+            <Route path="/setter/results" element={<ProtectedRoute requireRole="setter"><SetterResults /></ProtectedRoute>} />
             <Route path="/setter/questionnaire/:id/edit" element={<ProtectedRoute requireRole="setter"><QuestionnaireEditor /></ProtectedRoute>} />
             <Route path="/setter/questionnaire/:id/analytics" element={<ProtectedRoute requireRole="setter"><Analytics /></ProtectedRoute>} />
             <Route path="/setter/manual" element={<ProtectedRoute requireRole="setter"><SetterManual /></ProtectedRoute>} />

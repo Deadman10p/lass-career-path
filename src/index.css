@@ -4,77 +4,84 @@
 @tailwind components;
 @tailwind utilities;
 
-/* CareerPath — Design System
-   All colors HSL. Indigo primary, purple = setter, teal = student.
+/* LASS CAREER PATH — Design System
+   Black, Red, Blue brand palette inspired by Light Academy logo.
+   All colors HSL.
 */
 
 @layer base {
   :root {
-    --background: 250 100% 99%;
-    --foreground: 222 47% 11%;
+    --background: 0 0% 100%;
+    --foreground: 222 47% 6%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 222 47% 6%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 222 47% 6%;
 
-    --primary: 239 84% 60%;            /* Indigo #4F46E5 */
+    /* Brand tokens */
+    --brand-red: 354 78% 50%;          /* Light Academy red */
+    --brand-blue: 224 64% 28%;         /* Light Academy navy */
+    --brand-black: 222 47% 6%;
+
+    --primary: 224 64% 28%;            /* Navy blue */
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 239 90% 72%;
+    --primary-glow: 224 70% 45%;
 
     --secondary: 220 14% 96%;
     --secondary-foreground: 222 47% 11%;
 
     --muted: 220 14% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted-foreground: 215 16% 42%;
 
-    --accent: 239 84% 95%;
-    --accent-foreground: 239 84% 30%;
+    --accent: 224 70% 95%;
+    --accent-foreground: 224 64% 28%;
 
-    --setter: 262 83% 58%;             /* Purple #7C3AED */
+    --setter: 354 78% 50%;             /* Brand red for setter */
     --setter-foreground: 0 0% 100%;
-    --setter-soft: 262 90% 96%;
+    --setter-soft: 354 80% 96%;
 
-    --student: 173 80% 32%;            /* Teal #0D9488 */
+    --student: 224 64% 28%;            /* Brand navy for student */
     --student-foreground: 0 0% 100%;
-    --student-soft: 173 65% 95%;
+    --student-soft: 224 70% 95%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 84% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 71% 45%;
-    --warning: 38 92% 50%;
+    --success: 142 71% 38%;
+    --warning: 38 92% 48%;
 
     /* Likert rating colors */
-    --rate-1: 0 75% 55%;
-    --rate-2: 25 90% 55%;
-    --rate-3: 220 9% 60%;
-    --rate-4: 142 60% 45%;
-    --rate-5: 158 75% 32%;
+    --rate-1: 354 78% 50%;
+    --rate-2: 18 85% 55%;
+    --rate-3: 220 9% 55%;
+    --rate-4: 200 70% 45%;
+    --rate-5: 224 64% 28%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 239 84% 60%;
+    --border: 220 13% 89%;
+    --input: 220 13% 89%;
+    --ring: 224 64% 28%;
 
     --radius: 0.875rem;
 
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(239 84% 60%), hsl(262 83% 58%));
-    --gradient-setter: linear-gradient(135deg, hsl(262 83% 58%), hsl(290 80% 60%));
-    --gradient-student: linear-gradient(135deg, hsl(173 80% 32%), hsl(190 85% 45%));
-    --gradient-results: linear-gradient(135deg, hsl(239 84% 60%) 0%, hsl(262 83% 58%) 50%, hsl(290 80% 60%) 100%);
-    --gradient-soft: linear-gradient(180deg, hsl(250 100% 99%), hsl(239 84% 97%));
-    --gradient-celebration: radial-gradient(ellipse at top, hsl(50 100% 75% / 0.4), transparent 60%),
-                            radial-gradient(ellipse at bottom, hsl(290 80% 80% / 0.4), transparent 60%),
-                            hsl(250 100% 99%);
+    /* Gradients - brand-driven */
+    --gradient-primary: linear-gradient(135deg, hsl(224 64% 28%), hsl(354 78% 50%));
+    --gradient-setter: linear-gradient(135deg, hsl(354 78% 50%), hsl(0 75% 35%));
+    --gradient-student: linear-gradient(135deg, hsl(224 64% 28%), hsl(210 80% 45%));
+    --gradient-results: linear-gradient(135deg, hsl(224 64% 28%) 0%, hsl(280 50% 35%) 50%, hsl(354 78% 50%) 100%);
+    --gradient-soft: linear-gradient(180deg, hsl(0 0% 100%), hsl(224 70% 97%));
+    --gradient-celebration: radial-gradient(ellipse at top, hsl(354 78% 70% / 0.35), transparent 60%),
+                            radial-gradient(ellipse at bottom, hsl(224 70% 60% / 0.35), transparent 60%),
+                            hsl(0 0% 100%);
+    --gradient-brand: linear-gradient(90deg, hsl(222 47% 6%), hsl(224 64% 28%) 50%, hsl(354 78% 50%));
 
     /* Shadows */
-    --shadow-sm: 0 1px 2px hsl(222 47% 11% / 0.05);
-    --shadow-md: 0 4px 12px -2px hsl(222 47% 11% / 0.08);
-    --shadow-lg: 0 12px 32px -8px hsl(239 84% 60% / 0.18);
-    --shadow-glow: 0 0 32px hsl(239 84% 60% / 0.25);
-    --shadow-card: 0 2px 8px -2px hsl(222 47% 11% / 0.06), 0 1px 2px hsl(222 47% 11% / 0.04);
+    --shadow-sm: 0 1px 2px hsl(222 47% 6% / 0.05);
+    --shadow-md: 0 4px 12px -2px hsl(222 47% 6% / 0.08);
+    --shadow-lg: 0 12px 32px -8px hsl(224 64% 28% / 0.22);
+    --shadow-glow: 0 0 32px hsl(354 78% 50% / 0.22);
+    --shadow-card: 0 2px 8px -2px hsl(222 47% 6% / 0.06), 0 1px 2px hsl(222 47% 6% / 0.04);
 
     /* Motion */
     --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
@@ -97,19 +104,19 @@
     --card-foreground: 210 40% 98%;
     --popover: 222 47% 9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 239 90% 70%;
-    --primary-foreground: 222 47% 11%;
+    --primary: 224 70% 60%;
+    --primary-foreground: 222 47% 6%;
     --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217 33% 17%;
     --muted-foreground: 215 20% 65%;
-    --accent: 239 50% 25%;
+    --accent: 224 50% 25%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62% 45%;
     --destructive-foreground: 0 0% 100%;
     --border: 217 33% 20%;
     --input: 217 33% 20%;
-    --ring: 239 90% 70%;
+    --ring: 224 70% 60%;
   }
 }
 
@@ -130,6 +137,7 @@
   .gradient-results { background-image: var(--gradient-results); }
   .gradient-soft { background-image: var(--gradient-soft); }
   .gradient-celebration { background-image: var(--gradient-celebration); }
+  .gradient-brand { background-image: var(--gradient-brand); }
 
   .text-gradient-primary {
     background-image: var(--gradient-primary);

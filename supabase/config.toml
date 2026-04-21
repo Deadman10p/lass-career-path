@@ -1,1 +1,4 @@
 project_id = "hwzmkttbkufmzqkdtjzc"
+
+[functions.bootstrap-counsellor]
+verify_jwt = false
