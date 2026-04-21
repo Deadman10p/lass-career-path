@@ -14,16 +14,319 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      answer_weights: {
+        Row: {
+          career_cluster_id: string
+          id: string
+          question_id: string
+          weight: number
+        }
+        Insert: {
+          career_cluster_id: string
+          id?: string
+          question_id: string
+          weight?: number
+        }
+        Update: {
+          career_cluster_id?: string
+          id?: string
+          question_id?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "answer_weights_career_cluster_id_fkey"
+            columns: ["career_cluster_id"]
+            isOneToOne: false
+            referencedRelation: "career_clusters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "answer_weights_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      answers: {
+        Row: {
+          id: string
+          question_id: string
+          rating: number
+          response_id: string
+        }
+        Insert: {
+          id?: string
+          question_id: string
+          rating: number
+          response_id: string
+        }
+        Update: {
+          id?: string
+          question_id?: string
+          rating?: number
+          response_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "answers_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      career_clusters: {
+        Row: {
+          color_hex: string
+          created_at: string
+          description: string
+          icon_emoji: string
+          id: string
+          name: string
+          possible_careers: string[]
+          updated_at: string
+        }
+        Insert: {
+          color_hex?: string
+          created_at?: string
+          description?: string
+          icon_emoji?: string
+          id?: string
+          name: string
+          possible_careers?: string[]
+          updated_at?: string
+        }
+        Update: {
+          color_hex?: string
+          created_at?: string
+          description?: string
+          icon_emoji?: string
+          id?: string
+          name?: string
+          possible_careers?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          class_name: string | null
+          created_at: string
+          full_name: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          class_name?: string | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          class_name?: string | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      questionnaires: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          is_published: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string
+          id?: string
+          is_published?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          is_published?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      questions: {
+        Row: {
+          created_at: string
+          id: string
+          order_index: number
+          section_id: string
+          statement: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_index?: number
+          section_id: string
+          statement?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_index?: number
+          section_id?: string
+          statement?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questions_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      responses: {
+        Row: {
+          id: string
+          questionnaire_id: string
+          student_id: string
+          submitted_at: string
+        }
+        Insert: {
+          id?: string
+          questionnaire_id: string
+          student_id: string
+          submitted_at?: string
+        }
+        Update: {
+          id?: string
+          questionnaire_id?: string
+          student_id?: string
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "responses_questionnaire_id_fkey"
+            columns: ["questionnaire_id"]
+            isOneToOne: false
+            referencedRelation: "questionnaires"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      results: {
+        Row: {
+          career_cluster_id: string
+          id: string
+          response_id: string
+          total_score: number
+        }
+        Insert: {
+          career_cluster_id: string
+          id?: string
+          response_id: string
+          total_score?: number
+        }
+        Update: {
+          career_cluster_id?: string
+          id?: string
+          response_id?: string
+          total_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "results_career_cluster_id_fkey"
+            columns: ["career_cluster_id"]
+            isOneToOne: false
+            referencedRelation: "career_clusters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "results_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sections: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          order_index: number
+          questionnaire_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          order_index?: number
+          questionnaire_id: string
+          title?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          order_index?: number
+          questionnaire_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sections_questionnaire_id_fkey"
+            columns: ["questionnaire_id"]
+            isOneToOne: false
+            referencedRelation: "questionnaires"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "setter" | "student"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +453,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["setter", "student"],
+    },
   },
 } as const
