@@ -37,7 +37,7 @@ export function AIAssistantPanel({ open, onOpenChange, doc, clusters, onApplied 
   open: boolean; onOpenChange: (v: boolean) => void; doc: FullQuestionnaire; clusters: CareerCluster[]; onApplied: () => void;
 }) {
   const [msgs, setMsgs] = useState<Msg[]>([
-    { role: "assistant", content: "Hi! I can help refine this questionnaire. Try asking me to:\n\n- *“Add 3 questions about teamwork to Section B.”*\n- *“Make question 4 stronger toward Technology & Innovation.”*\n- *“Rewrite Section A to focus on creative interests.”*\n\nI'll always show you the changes first and only apply them if you approve." },
+    { role: "assistant", content: "Hi! I'm your questionnaire co-pilot. **Just chat with me** — ask anything:\n\n- *“What do you think of section B?”*\n- *“Is this questionnaire balanced across clusters?”*\n- *“Which questions are too vague?”*\n- *“Give me ideas for Year 10 students.”*\n\nWhen you ask me to actually **change** something (add, rewrite, set weights, delete…), I'll show you the proposed change first and only apply it if you click Apply." },
   ]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);

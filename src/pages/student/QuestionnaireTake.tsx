@@ -17,11 +17,11 @@ import { cn } from "@/lib/utils";
 type Stage = "intro" | "question" | "section-transition" | "submitting";
 
 const RATINGS = [
-  { value: 1, label: "Strongly Disagree", short: "SD", tone: "bg-rating-1 hover:bg-rating-1 text-white border-rating-1" },
-  { value: 2, label: "Disagree", short: "D", tone: "bg-rating-2 hover:bg-rating-2 text-white border-rating-2" },
-  { value: 3, label: "Neutral", short: "N", tone: "bg-rating-3 hover:bg-rating-3 text-white border-rating-3" },
-  { value: 4, label: "Agree", short: "A", tone: "bg-rating-4 hover:bg-rating-4 text-white border-rating-4" },
-  { value: 5, label: "Strongly Agree", short: "SA", tone: "bg-rating-5 hover:bg-rating-5 text-white border-rating-5" },
+  { value: 1, label: "Strongly Disagree", short: "SD", tone: "bg-rate-1 hover:bg-rate-1 text-white border-rate-1" },
+  { value: 2, label: "Disagree", short: "D", tone: "bg-rate-2 hover:bg-rate-2 text-white border-rate-2" },
+  { value: 3, label: "Neutral", short: "N", tone: "bg-rate-3 hover:bg-rate-3 text-white border-rate-3" },
+  { value: 4, label: "Agree", short: "A", tone: "bg-rate-4 hover:bg-rate-4 text-white border-rate-4" },
+  { value: 5, label: "Strongly Agree", short: "SA", tone: "bg-rate-5 hover:bg-rate-5 text-white border-rate-5" },
 ];
 
 interface FlatItem { sectionIndex: number; sectionTitle: string; sectionDesc: string; q: QuestionWithWeights }
