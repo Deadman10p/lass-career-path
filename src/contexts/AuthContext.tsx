@@ -10,6 +10,7 @@ export interface Profile {
   role: AppRole;
   full_name: string;
   class_name: string | null;
+  stream?: string | null;
   created_at: string;
 }
 
