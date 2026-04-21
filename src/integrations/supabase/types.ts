@@ -126,6 +126,7 @@ export type Database = {
           full_name: string
           id: string
           role: Database["public"]["Enums"]["app_role"]
+          stream: string | null
           user_id: string
         }
         Insert: {
@@ -134,6 +135,7 @@ export type Database = {
           full_name?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          stream?: string | null
           user_id: string
         }
         Update: {
@@ -142,6 +144,7 @@ export type Database = {
           full_name?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          stream?: string | null
           user_id?: string
         }
         Relationships: []
