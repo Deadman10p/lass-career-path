@@ -48,19 +48,21 @@ export default function SetterManual() {
           </div>
         </Section>
 
-        <Section icon={<Upload className="h-5 w-5" />} title="5. Bulk import (JSON / PDF / DOCX / XLSX)">
-          Click <strong>Import</strong> in the editor toolbar to upload a file or paste JSON. The system extracts sections and questions and shows you a preview before anything is added.
+        <Section icon={<Upload className="h-5 w-5" />} title="5. Bulk import (JSON / PDF / DOCX / XLSX) — now with weights">
+          Click <strong>Import</strong> in the editor toolbar to upload a file or paste JSON. The system extracts sections, questions <strong>and (when present) cluster weights</strong>, and shows you a preview before anything is added.
           <ul className="mt-2 list-disc pl-5 text-sm">
-            <li><strong>JSON:</strong> <code>{`{ "sections": [{ "title": "Interests", "questions": ["…"] }] }`}</code></li>
-            <li><strong>XLSX:</strong> Column A = section title (repeat per row), Column B = question statement.</li>
-            <li><strong>PDF / DOCX:</strong> Sent to AI for extraction — sections and questions are auto-grouped from headings.</li>
+            <li><strong>JSON:</strong> <code>{`{ "sections": [{ "title": "Interests", "questions": [{ "statement": "I enjoy…", "weights": { "Science & Engineering": 4, "Technology & Innovation": 5 } }] }] }`}</code> — the <code>weights</code> field is optional.</li>
+            <li><strong>XLSX:</strong> Row 1 headers <code>Section | Question | &lt;Cluster name&gt; | &lt;Cluster name&gt; | …</code>. Each cluster column holds a 0–5 weight. Cluster columns are optional.</li>
+            <li><strong>PDF / DOCX:</strong> AI extracts sections and questions; if the document contains a scoring grid the cluster weights are pulled too.</li>
           </ul>
-          <div className="mt-3 rounded-lg bg-accent p-3 text-sm">
-            After import, head to the <strong>Weights</strong> tab to assign cluster weights for the new questions — they default to 0 (no contribution) until you set them.
+          <div className="mt-3 rounded-lg bg-accent p-3 text-sm space-y-1">
+            <div><strong>How consent works:</strong> Questions are imported automatically, but <strong>weights are only applied if you tick the “Also apply detected weights” box on the preview screen.</strong> This lets you eyeball a scoring grid before it overwrites anything.</div>
+            <div><strong>Cluster matching:</strong> Weight column / key names are matched (case-insensitive) against your existing clusters. Unmatched names are highlighted in red on the preview and silently skipped — fix them by adding/renaming clusters in the <em>Clusters</em> tab and re-importing.</div>
+            <div><strong>Weights only?</strong> If you only want to update weights for existing questions, use the AI Assistant (<em>“Set the weight for question 3 on Technology & Innovation to 5”</em>) — bulk import always appends new sections.</div>
           </div>
         </Section>
 
-        <Section icon={<MessageSquare className="h-5 w-5" />} title="6. AI Assistant — open chat with propose-then-confirm">
+        <Section icon={<MessageSquare className="h-5 w-5" />} title="6. AI Assistant — open chat, persistent memory, propose-then-confirm">
           Click <strong>AI Assistant</strong> in the editor to open a free-form chat. It can read your full questionnaire (sections, questions, weights) and you can talk to it like a colleague:
           <ul className="mt-2 list-disc pl-5 text-sm">
             <li>Ask for opinions: <em>“Is this balanced across all 6 clusters?”</em></li>
@@ -69,9 +71,15 @@ export default function SetterManual() {
             <li>Make changes: <em>“Add 3 teamwork questions to Section B,”</em> <em>“Set question 4's weight for Technology to 5,”</em> <em>“Rewrite question 7 to be more specific.”</em></li>
           </ul>
           <div className="mt-3 rounded-lg bg-accent p-3 text-sm">
-            Whenever the assistant proposes an actual edit, you'll see a <strong>“Proposed changes”</strong> card with a list of what will happen. Click <strong>Apply</strong> to commit, or <strong>Reject</strong> to discard. Pure chat or analysis won't trigger a proposal.
+            Whenever the assistant proposes an actual edit, you'll see a <strong>“Proposed changes”</strong> card. Click <strong>Apply</strong> to commit, or <strong>Reject</strong> to discard. Pure chat or analysis won't trigger a proposal.
+          </div>
+          <div className="mt-3 rounded-lg border border-setter/30 bg-setter/5 p-3 text-sm space-y-1">
+            <div><strong>🧠 Memory:</strong> The assistant now remembers your conversation <em>per questionnaire</em> across sessions (stored locally in your browser). Older turns are automatically <strong>summarised</strong> into a short memory note so the chat never grows stale.</div>
+            <div><strong>🔄 Always fresh:</strong> Every time you click <em>Apply</em>, the editor reloads and the assistant immediately gets the new snapshot — including new IDs, statements and weights — so its next suggestion never references stale data.</div>
+            <div><strong>Reset:</strong> Use the <em>Reset memory</em> button in the panel header to wipe the conversation and the summary for this questionnaire.</div>
           </div>
         </Section>
+
 
         <Section icon={<Eye className="h-5 w-5" />} title="7. Publish to students">
           When ready, toggle <strong>Published</strong>. Only published questionnaires appear on student dashboards. You can switch back to draft any time without losing responses.
