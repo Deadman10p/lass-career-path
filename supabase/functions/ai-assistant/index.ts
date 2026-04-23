@@ -39,26 +39,36 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { message, history = [], questionnaire } = await req.json();
+    const { message, history = [], questionnaire, memory_summary, mode } = await req.json();
     if (!message || !questionnaire) {
       return new Response(JSON.stringify({ error: "missing fields" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const messages = [
-      { role: "system", content: SYSTEM },
-      { role: "system", content: "Current questionnaire (use these exact IDs when proposing edits):\n" + JSON.stringify(questionnaire) },
-      ...history.slice(-12),
-      { role: "user", content: message },
-    ];
+    const isSummarise = mode === "summarise";
+
+    const messages: any[] = isSummarise
+      ? [
+          { role: "system", content: "You are a memory compressor. Reply with plain text only (no JSON, no markdown headings)." },
+          { role: "user", content: message },
+        ]
+      : [
+          { role: "system", content: SYSTEM },
+          { role: "system", content: "Current questionnaire (use these EXACT IDs when proposing edits — this snapshot is always the latest after any prior applied changes):\n" + JSON.stringify(questionnaire) },
+          ...(memory_summary ? [{ role: "system", content: `Long-term memory of this conversation so far:\n${memory_summary}` }] : []),
+          ...history.slice(-12),
+          { role: "user", content: message },
+        ];
+
+    const body: any = {
+      model: "google/gemini-2.5-flash",
+      messages,
+    };
+    if (!isSummarise) body.response_format = { type: "json_object" };
 
     const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${LOVABLE_API_KEY}` },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages,
-        response_format: { type: "json_object" },
-      }),
+      body: JSON.stringify(body),
     });
 
     if (r.status === 429) return new Response(JSON.stringify({ error: "Rate limit. Try again shortly." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
