@@ -38,7 +38,7 @@ export default function QuestionnaireEditor() {
 
   const reload = async () => {
     setLoading(true);
-    const [d, cs] = await Promise.all([fetchFullQuestionnaire(id), fetchClusters()]);
+    const [d, cs] = await Promise.all([fetchFullQuestionnaire(id), fetchClusters(id)]);
     setDoc(d);
     setClusters(cs);
     setLoading(false);
@@ -242,7 +242,7 @@ export default function QuestionnaireEditor() {
         </TabsContent>
 
         <TabsContent value="clusters" className="mt-5">
-          <ClusterManager clusters={clusters} onChange={setClusters} />
+          <ClusterManager clusters={clusters} onChange={setClusters} questionnaireId={id} />
         </TabsContent>
 
         <TabsContent value="weights" className="mt-5">

@@ -21,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchClusters } from "@/lib/api";
+import { fetchAllClusters } from "@/lib/api";
 import type { CareerCluster } from "@/lib/types";
 import { Download, Search, Users, Trophy, Filter, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
@@ -56,7 +56,7 @@ export default function SetterResults() {
       setLoading(true);
 
       const [cs, { data: resps }, { data: qs }] = await Promise.all([
-        fetchClusters(),
+        fetchAllClusters(),
         supabase
           .from("responses")
           .select("*")

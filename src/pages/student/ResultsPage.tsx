@@ -35,7 +35,7 @@ export default function ResultsPage() {
     (async () => {
       setLoading(true);
       const [cs, { data: resp }, { data: rs }] = await Promise.all([
-        fetchClusters(),
+        fetchClusters(questionnaireId || undefined),
         supabase.from("responses").select("*").eq("id", responseId).maybeSingle(),
         supabase.from("results").select("*").eq("response_id", responseId),
       ]);

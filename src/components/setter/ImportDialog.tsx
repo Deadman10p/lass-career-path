@@ -25,7 +25,7 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
   const [clusters, setClusters] = useState<CareerCluster[]>([]);
   const [applyWeights, setApplyWeights] = useState(true);
 
-  useEffect(() => { if (open) fetchClusters().then(setClusters).catch(() => {}); }, [open]);
+  useEffect(() => { if (open) fetchClusters(questionnaireId).then(setClusters).catch(() => {}); }, [open, questionnaireId]);
 
   const reset = () => { setFile(null); setJsonText(""); setPreview(null); setApplyWeights(true); };
 

@@ -42,7 +42,7 @@ export default function QuestionnaireTake() {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const [d, cs] = await Promise.all([fetchFullQuestionnaire(id), fetchClusters()]);
+      const [d, cs] = await Promise.all([fetchFullQuestionnaire(id), fetchClusters(id)]);
       setDoc(d);
       setClusters(cs);
       setLoading(false);

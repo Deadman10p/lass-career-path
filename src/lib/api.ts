@@ -1,7 +1,33 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { CareerCluster, FullQuestionnaire, SectionWithQuestions, QuestionWithWeights } from "./types";
 
-export async function fetchClusters(): Promise<CareerCluster[]> {
+export async function fetchClusters(questionnaireId?: string): Promise<CareerCluster[]> {
+  let query = supabase.from("career_clusters").select("*");
+  
+  if (questionnaireId) {
+    // Fetch clusters specific to this questionnaire via the junction table
+    const { data: qcData, error: qcError } = await supabase
+      .from("questionnaire_clusters")
+      .select("career_cluster_id")
+      .eq("questionnaire_id", questionnaireId);
+    
+    if (qcError) throw qcError;
+    
+    if (qcData && qcData.length > 0) {
+      const clusterIds = qcData.map(qc => qc.career_cluster_id);
+      query = query.in("id", clusterIds);
+    } else {
+      // No clusters assigned yet, return empty array
+      return [];
+    }
+  }
+  
+  const { data, error } = await query.order("name");
+  if (error) throw error;
+  return (data ?? []) as CareerCluster[];
+}
+
+export async function fetchAllClusters(): Promise<CareerCluster[]> {
   const { data, error } = await supabase
     .from("career_clusters").select("*").order("name");
   if (error) throw error;
