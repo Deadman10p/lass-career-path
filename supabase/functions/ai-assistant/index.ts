@@ -79,9 +79,14 @@ Deno.serve(async (req) => {
     }
 
     const data = await r.json();
-    const content = data.choices?.[0]?.message?.content ?? "{}";
+    const content = data.choices?.[0]?.message?.content ?? "";
+
+    if (isSummarise) {
+      return new Response(JSON.stringify({ reply: String(content).trim(), proposal: null }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     let parsed: any = {};
-    try { parsed = JSON.parse(content); } catch { parsed = { reply: content, proposal: null }; }
+    try { parsed = JSON.parse(content || "{}"); } catch { parsed = { reply: content, proposal: null }; }
 
     return new Response(JSON.stringify({
       reply: parsed.reply ?? "Done.",
