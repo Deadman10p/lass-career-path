@@ -25,40 +25,46 @@ export default function SetterManual() {
           </div>
         </Section>
 
-        <Section icon={<Compass className="h-5 w-5" />} title="3. Manage career clusters">
-          Six clusters are pre-loaded: Science & Engineering, Helping & People, Practical & Hands-on, Creative & Expressive, Leadership & Communication, Technology & Innovation. Edit names, emojis, descriptions, and the list of possible careers. You can add or remove clusters as needed.
+        <Section icon={<Compass className="h-5 w-5" />} title="3. Manage clusters (categories)">
+          Six career clusters are pre-loaded (Science & Engineering, Helping & People, Practical & Hands-on, Creative & Expressive, Leadership & Communication, Technology & Innovation), but <strong>clusters don't have to be careers</strong>. They are simply the categories a questionnaire scores on — you can repurpose them for learning styles (Visual / Auditory / Kinesthetic), personality traits, values, study habits, or anything else. Edit names, emojis, descriptions, and the list of "possible careers" (or rename that field's contents to suggested study tips, recommended subjects, etc.).
         </Section>
 
         <Section icon={<Scale className="h-5 w-5" />} title="4. The marking grid (Weights — the most important step)">
-          In <strong>Weights</strong>, give each question a weight (0–5) for each cluster. This is the <strong>marking grid</strong> that turns a student's 1–5 answer into cluster scores.
+          In <strong>Weights</strong>, give each question a weight for each cluster. This is the <strong>marking grid</strong> that turns a student's 1–5 answer into cluster scores.
           <div className="mt-3 rounded-lg bg-accent p-3 text-sm">
             <strong>Scoring formula:</strong> <code>contribution = student_rating × question_weight</code><br />
-            <strong>Example:</strong> Student picks <em>Strongly Agree (5)</em> on a question with weight <em>4</em> for "Technology & Innovation" → <code>5 × 4 = 20 points</code> added to that cluster.
+            <strong>Example:</strong> Student picks <em>Strongly Agree (5)</em> on a question with weight <em>4</em> for a cluster → <code>5 × 4 = 20 points</code> added to that cluster.
             <br /><br />
             We then <strong>sum every contribution</strong> per cluster and rank them. The cluster with the highest total is the student's strongest match.
           </div>
+          <div className="mt-3 rounded-lg border border-setter/30 bg-setter/5 p-3 text-sm">
+            <strong>Flexible scale:</strong> Weights are now a free numeric input (any non-negative integer). Use whatever scale suits your inventory:
+            <ul className="mt-1 list-disc pl-5">
+              <li><strong>0–3</strong> — quick coarse mapping.</li>
+              <li><strong>0–5</strong> — the classic default; works well for most career inventories.</li>
+              <li><strong>0–10 or higher</strong> — when you want fine-grained influence or to mirror an existing scoring sheet exactly.</li>
+            </ul>
+            The scale you choose only needs to be <em>consistent within a single questionnaire</em>; cluster percentages are calculated relative to the maximum possible for that questionnaire, so big numbers won't break the ranking.
+          </div>
           <ul className="mt-3 list-disc pl-5 text-sm">
             <li><strong>0</strong> — this question doesn't relate to that cluster.</li>
-            <li><strong>1–2</strong> — weak / secondary signal.</li>
-            <li><strong>3</strong> — moderate signal.</li>
-            <li><strong>4–5</strong> — strong / primary indicator for that cluster.</li>
+            <li><strong>Low values</strong> — weak / secondary signal.</li>
+            <li><strong>Mid values</strong> — moderate signal.</li>
+            <li><strong>High values</strong> — strong / primary indicator for that cluster.</li>
           </ul>
-          <div className="mt-3 text-sm">
-            Most questions should clearly point at <em>one</em> cluster (weight 4–5) and lightly at one or two others (weight 1–2). A few "values" or "strengths" questions may spread across several clusters.
-          </div>
         </Section>
 
-        <Section icon={<Upload className="h-5 w-5" />} title="5. Bulk import (JSON / PDF / DOCX / XLSX) — now with weights">
-          Click <strong>Import</strong> in the editor toolbar to upload a file or paste JSON. The system extracts sections, questions <strong>and (when present) cluster weights</strong>, and shows you a preview before anything is added.
+        <Section icon={<Upload className="h-5 w-5" />} title="5. Bulk import (JSON / PDF / DOCX / XLSX) — adaptive clusters & weights">
+          Click <strong>Import</strong> in the editor toolbar to upload a file or paste JSON. The system extracts sections, questions <strong>and (when present) the category weights at the exact scale used in the source document</strong>, and shows you a preview before anything is added.
           <ul className="mt-2 list-disc pl-5 text-sm">
-            <li><strong>JSON:</strong> <code>{`{ "sections": [{ "title": "Interests", "questions": [{ "statement": "I enjoy…", "weights": { "Science & Engineering": 4, "Technology & Innovation": 5 } }] }] }`}</code> — the <code>weights</code> field is optional.</li>
-            <li><strong>XLSX:</strong> Row 1 headers <code>Section | Question | &lt;Cluster name&gt; | &lt;Cluster name&gt; | …</code>. Each cluster column holds a 0–5 weight. Cluster columns are optional.</li>
-            <li><strong>PDF / DOCX:</strong> AI extracts sections and questions; if the document contains a scoring grid the cluster weights are pulled too.</li>
+            <li><strong>JSON:</strong> <code>{`{ "sections": [{ "title": "Interests", "questions": [{ "statement": "I enjoy…", "weights": { "Visual": 3, "Auditory": 1 } }] }] }`}</code> — the <code>weights</code> field is optional, and category names can be anything (career clusters, learning styles, personality traits…).</li>
+            <li><strong>XLSX:</strong> Row 1 headers <code>Section | Question | &lt;Category 1&gt; | &lt;Category 2&gt; | …</code>. Each category column holds a non-negative integer weight at whatever scale your sheet uses.</li>
+            <li><strong>PDF / DOCX:</strong> AI extracts sections and questions; if the document contains a scoring grid the category weights are pulled too, preserved exactly as written (no re-scaling, no clamping to 0–5).</li>
           </ul>
           <div className="mt-3 rounded-lg bg-accent p-3 text-sm space-y-1">
             <div><strong>How consent works:</strong> Questions are imported automatically, but <strong>weights are only applied if you tick the “Also apply detected weights” box on the preview screen.</strong> This lets you eyeball a scoring grid before it overwrites anything.</div>
             <div><strong>Cluster matching:</strong> Weight column / key names are matched (case-insensitive) against your existing clusters. Unmatched names are highlighted in red on the preview and silently skipped — fix them by adding/renaming clusters in the <em>Clusters</em> tab and re-importing.</div>
-            <div><strong>Weights only?</strong> If you only want to update weights for existing questions, use the AI Assistant (<em>“Set the weight for question 3 on Technology & Innovation to 5”</em>) — bulk import always appends new sections.</div>
+            <div><strong>Weights only?</strong> If you only want to update weights for existing questions, use the AI Assistant (<em>“Set the weight for question 3 on Visual to 7”</em>) — bulk import always appends new sections.</div>
           </div>
         </Section>
 

@@ -309,7 +309,7 @@ function WeightsMatrix({ doc, clusters, onSet }: { doc: FullQuestionnaire; clust
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-border bg-accent/50 p-4 text-sm text-accent-foreground">
-        Set how strongly each question contributes to each career cluster. <strong>0 = no link, 5 = strongest link.</strong> A student rating of 5 × weight of 4 = 20 points to that cluster.
+        Set how strongly each question contributes to each category. <strong>0 = no link.</strong> Larger numbers mean a stronger link — use whatever scale suits your inventory (e.g. 0–3, 0–5, 0–10). Each student answer is multiplied by the weight, so a rating of 5 × weight of 4 = <strong>20 points</strong> to that category.
       </div>
       {all.map(({ section, q }, i) => (
         <div key={q.id} className="rounded-2xl border border-border bg-card p-4 shadow-card">
@@ -318,26 +318,32 @@ function WeightsMatrix({ doc, clusters, onSet }: { doc: FullQuestionnaire; clust
             <div className="font-medium">{i + 1}. {q.statement || <span className="italic text-muted-foreground">(empty question)</span>}</div>
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
-            {clusters.map(c => (
-              <div key={c.id} className="flex items-center gap-3 rounded-lg bg-secondary/50 p-2">
-                <span className="text-lg">{c.icon_emoji}</span>
-                <div className="flex-1 truncate text-sm font-medium">{c.name}</div>
-                <div className="flex gap-1">
-                  {[0,1,2,3,4,5].map(w => (
-                    <button
-                      key={w}
-                      onClick={() => onSet(q.id, c.id, w)}
-                      className={cn(
-                        "h-7 w-7 rounded-md text-xs font-semibold transition-all",
-                        (q.weights[c.id] ?? 0) === w
-                          ? "gradient-setter text-setter-foreground shadow-glow scale-110"
-                          : "bg-background text-muted-foreground hover:bg-accent"
-                      )}
-                    >{w}</button>
-                  ))}
+            {clusters.map(c => {
+              const value = q.weights[c.id] ?? 0;
+              return (
+                <div key={c.id} className="flex items-center gap-3 rounded-lg bg-secondary/50 p-2">
+                  <span className="text-lg">{c.icon_emoji}</span>
+                  <div className="flex-1 truncate text-sm font-medium">{c.name}</div>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={value}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      if (raw === "") return onSet(q.id, c.id, 0);
+                      const n = Math.max(0, Math.round(Number(raw)));
+                      if (Number.isFinite(n)) onSet(q.id, c.id, n);
+                    }}
+                    className={cn(
+                      "h-8 w-16 rounded-md border border-border bg-background px-2 text-center text-sm font-semibold tabular-nums transition-all focus:outline-none focus:ring-2 focus:ring-setter/40",
+                      value > 0 && "border-setter/50 text-setter",
+                    )}
+                    aria-label={`Weight for ${c.name}`}
+                  />
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ))}

@@ -35,7 +35,7 @@ export function ClusterManager({ clusters, onChange }: { clusters: CareerCluster
   return (
     <div className="space-y-3">
       <div className="rounded-lg border border-border bg-accent/50 p-4 text-sm text-accent-foreground">
-        Career clusters are the categories students get scored on. The 6 defaults cover the main career families — feel free to edit, add or remove.
+        Clusters are the categories students get scored on. They don't have to be career-specific — use them for learning styles, personality traits, values, or any grouping your inventory measures. Edit, add or remove freely.
       </div>
       {clusters.map(c => (
         <div key={c.id} className="rounded-2xl border border-border bg-card p-4 shadow-card">
