@@ -36,7 +36,7 @@ export default function Analytics() {
       setLoading(true);
       const [d, cs, { data: resps }] = await Promise.all([
         fetchFullQuestionnaire(id),
-        fetchClusters(),
+        fetchClusters(id),
         supabase.from("responses").select("*").eq("questionnaire_id", id).order("submitted_at", { ascending: false }),
       ]);
       setDoc(d);
