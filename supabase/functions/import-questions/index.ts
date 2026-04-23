@@ -12,7 +12,8 @@ function normaliseWeights(raw: any): Record<string, number> | undefined {
   for (const [k, v] of Object.entries(raw)) {
     const n = Number(v);
     if (!Number.isFinite(n)) continue;
-    out[String(k).trim()] = Math.max(0, Math.min(5, Math.round(n)));
+    // Preserve whatever scale the source document uses — only enforce non-negative integers.
+    out[String(k).trim()] = Math.max(0, Math.round(n));
   }
   return Object.keys(out).length ? out : undefined;
 }
@@ -36,12 +37,13 @@ async function aiExtractFromFile(ext: string, base64: string, mime?: string): Pr
     body: JSON.stringify({
       model: "google/gemini-2.5-flash",
       messages: [
-        { role: "system", content: `Extract a Likert-style career questionnaire with optional scoring weights. Output JSON of shape:
-{ "sections": [{ "title": "...", "description": "...", "questions": [{ "statement": "...", "weights": { "<cluster name>": 0..5 } }] }] }
+        { role: "system", content: `Extract a Likert-style questionnaire with optional scoring weights. The questionnaire may be about careers, learning styles, personality, values — anything. Output JSON of shape:
+{ "sections": [{ "title": "...", "description": "...", "questions": [{ "statement": "...", "weights": { "<category name>": <integer> } }] }] }
 Rules:
 - Strip leading numbering like "1." or "Q3:" from statements.
 - Group by visible headings/sections; if none, use "Imported".
-- If the document contains a scoring/weighting grid (e.g. a table mapping each question to clusters with numeric weights), include the "weights" object on each question. Cluster names must be exactly as written in the document. Use integer weights 0–5.
+- If the document contains a scoring/weighting grid (a table mapping each question to categories/clusters/traits with numeric weights), include the "weights" object on each question. Category names must be EXACTLY as written in the document — do not rename, translate or normalise them.
+- Preserve the EXACT integer weights from the document (do not clamp, rescale or cap them — if the grid uses 0–3, 0–10, or any other scale, return those numbers as-is).
 - If no weights are present, omit the "weights" field — do NOT invent values.` },
         { role: "user", content: [
           { type: "text", text: `Extract sections, questions and (if present) cluster weights from this ${ext.toUpperCase()} file.` },
@@ -95,7 +97,8 @@ function parseXlsx(b64: string): ParsedSection[] {
       const v = row[c.idx];
       if (v === null || v === undefined || v === "") continue;
       const n = Number(v);
-      if (Number.isFinite(n)) weights[c.name] = Math.max(0, Math.min(5, Math.round(n)));
+      // Preserve the scale used in the source spreadsheet — only enforce non-negative integers.
+      if (Number.isFinite(n)) weights[c.name] = Math.max(0, Math.round(n));
     }
     const q: ParsedQuestion = { statement };
     if (Object.keys(weights).length) q.weights = weights;

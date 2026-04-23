@@ -121,7 +121,9 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
             for (const [name, val] of Object.entries(w)) {
               const cid = clusterIdByName.get(name.trim().toLowerCase());
               if (!cid) continue;
-              weightRows.push({ question_id: row.id, career_cluster_id: cid, weight: Math.max(0, Math.min(5, Math.round(Number(val)))) });
+              const num = Number(val);
+              if (!Number.isFinite(num)) continue;
+              weightRows.push({ question_id: row.id, career_cluster_id: cid, weight: Math.max(0, Math.round(num)) });
             }
           });
         }
@@ -149,7 +151,7 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
       <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 font-display"><Upload className="h-5 w-5" /> Bulk Import Questions</DialogTitle>
-          <DialogDescription>Upload a file or paste JSON. The AI will extract sections, questions and (when present) cluster weights for you to review before insert.</DialogDescription>
+          <DialogDescription>Upload a file or paste JSON. The AI will extract sections, questions and (when present) category weights for you to review before insert. Categories can be career clusters, learning styles, personality traits — whatever the source document uses. Weights are kept at the exact scale of the document (e.g. 0–3, 0–5, 0–10).</DialogDescription>
         </DialogHeader>
 
         {!preview && (
