@@ -82,7 +82,7 @@ export default function ResultsPage() {
     const html2pdf = (await import("html2pdf.js")).default;
     await html2pdf().set({
       margin: [10, 10, 10, 10],
-      filename: `career-results-${(profile?.full_name ?? "student").replace(/\s+/g, "-")}.pdf`,
+      filename: `lass-results-${(profile?.full_name ?? "student").replace(/\s+/g, "-")}.pdf`,
       image: { type: "jpeg", quality: 0.95 },
       html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
@@ -119,12 +119,12 @@ export default function ResultsPage() {
             <Trophy className="h-4 w-4" /> Your top match
           </div>
           <h1 className="mt-2 font-display text-3xl font-semibold sm:text-4xl">
-            Your Career Profile is Ready, {profile?.full_name?.split(" ")[0] || "Student"}!
+            Your Results are Ready, {profile?.full_name?.split(" ")[0] || "Student"}!
           </h1>
           <div className="mt-3 flex items-center gap-3">
             <span className="text-5xl">{top.cluster.icon_emoji}</span>
             <div>
-              <div className="text-xs text-muted-foreground">Strongest cluster</div>
+              <div className="text-xs text-muted-foreground">Strongest category</div>
               <div className="font-display text-2xl font-semibold">{top.cluster.name}</div>
             </div>
           </div>
@@ -134,13 +134,13 @@ export default function ResultsPage() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.5 }}
           className="rounded-2xl border border-border bg-card p-5 shadow-card sm:p-6">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <h2 className="font-display text-xl font-semibold">Where you'd thrive</h2>
+            <h2 className="font-display text-xl font-semibold">Where you stand out</h2>
             <Badge className="bg-success text-white">{top.total} pts</Badge>
           </div>
           <p className="text-sm text-muted-foreground">{top.cluster.description}</p>
           {top.cluster.possible_careers?.length > 0 && (
             <div className="mt-4">
-              <div className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Possible career paths</div>
+              <div className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Suggested next steps</div>
               <div className="flex flex-wrap gap-2">
                 {top.cluster.possible_careers.map((career) => (
                   <span key={career} className="rounded-full bg-student/10 px-3 py-1 text-xs font-medium text-student">{career}</span>
@@ -169,7 +169,7 @@ export default function ResultsPage() {
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.5 }}
             className="rounded-2xl border border-border bg-card p-5 shadow-card">
-            <h3 className="mb-3 font-display font-semibold">Score per cluster</h3>
+            <h3 className="mb-3 font-display font-semibold">Score per category</h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={barData} layout="vertical" margin={{ left: 10, right: 10 }}>
@@ -199,8 +199,8 @@ export default function ResultsPage() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.5 }}
           className="rounded-2xl border border-border bg-card shadow-card">
           <div className="border-b border-border p-5">
-            <h3 className="font-display text-lg font-semibold">All clusters ranked</h3>
-            <p className="text-xs text-muted-foreground">Tap any to see possible career paths.</p>
+            <h3 className="font-display text-lg font-semibold">All categories ranked</h3>
+            <p className="text-xs text-muted-foreground">Tap any to see suggested next steps.</p>
           </div>
           <Accordion type="single" collapsible className="px-2 pb-2">
             {ranked100.map((r, i) => (

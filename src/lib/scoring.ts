@@ -44,6 +44,9 @@ export function computeScores(
 }
 
 export function generateInsights(ranked: ClusterScore[]): string[] {
+  // Hand-tuned insights for the original career clusters. For any other
+  // category (learning style, personality trait, etc.) we fall back to a
+  // generic, encouraging line built from the cluster's name and description.
   const tips: Record<string, string> = {
     "Science & Engineering":
       "You're highly analytical — careers in research, medicine, or engineering would suit you well.",
@@ -58,5 +61,10 @@ export function generateInsights(ranked: ClusterScore[]): string[] {
     "Technology & Innovation":
       "You think in systems. Software, data, AI, and product roles would let you build the future.",
   };
-  return ranked.slice(0, 3).map((c) => tips[c.cluster.name] ?? `Your strength in ${c.cluster.name} stands out.`);
+  return ranked.slice(0, 3).map((c) => {
+    if (tips[c.cluster.name]) return tips[c.cluster.name];
+    const desc = c.cluster.description?.trim();
+    if (desc) return `${c.cluster.name} stands out for you — ${desc}`;
+    return `Your strength in ${c.cluster.name} stands out.`;
+  });
 }
