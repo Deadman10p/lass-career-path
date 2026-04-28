@@ -149,6 +149,42 @@ export type Database = {
         }
         Relationships: []
       }
+      questionnaire_clusters: {
+        Row: {
+          career_cluster_id: string
+          created_at: string | null
+          id: string
+          questionnaire_id: string
+        }
+        Insert: {
+          career_cluster_id: string
+          created_at?: string | null
+          id?: string
+          questionnaire_id: string
+        }
+        Update: {
+          career_cluster_id?: string
+          created_at?: string | null
+          id?: string
+          questionnaire_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questionnaire_clusters_career_cluster_id_fkey"
+            columns: ["career_cluster_id"]
+            isOneToOne: false
+            referencedRelation: "career_clusters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "questionnaire_clusters_questionnaire_id_fkey"
+            columns: ["questionnaire_id"]
+            isOneToOne: false
+            referencedRelation: "questionnaires"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       questionnaires: {
         Row: {
           created_at: string
@@ -316,6 +352,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_questionnaire_clusters: {
+        Args: { q_id: string }
+        Returns: {
+          color: string
+          description: string
+          icon: string
+          id: string
+          name: string
+        }[]
+      }
       get_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
