@@ -8,6 +8,7 @@ export interface CareerCluster {
   icon_emoji: string;
   possible_careers: string[];
   color_hex: string;
+  questionnaire_id?: string | null;
 }
 
 export interface Questionnaire {

@@ -28,8 +28,13 @@ export async function fetchClusters(questionnaireId?: string): Promise<CareerClu
 }
 
 export async function fetchAllClusters(): Promise<CareerCluster[]> {
+  // Templates: only global (questionnaire_id IS NULL) clusters appear in the
+  // shared pool. Questionnaire-scoped clusters are private to their owner.
   const { data, error } = await supabase
-    .from("career_clusters").select("*").order("name");
+    .from("career_clusters")
+    .select("*")
+    .is("questionnaire_id", null)
+    .order("name");
   if (error) throw error;
   return (data ?? []) as CareerCluster[];
 }
