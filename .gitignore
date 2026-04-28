@@ -1,24 +1,59 @@
+```
+# Database migrations
+supabase/migrations/*.sql
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+*.js
+*.ts
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Editors
+.vscode/
+.idea/
+
 # Logs
-logs
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Temp files
+*.tmp
+*.swp
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Compiled
+*.o
+*.obj
+*.so
+*.a
+*.dll
+*.exe
+*.out
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# Caches
+.mypy_cache/
+.pytest_cache/
+.gradle/
+target/
+
+# System
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
+```
