@@ -307,4 +307,63 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
                               const known = clusterIdByName.has(n.trim().toLowerCase());
                               return (
                                 <span key={n} className={`rounded px-1.5 py-0.5 text-[10px] ${known ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"}`} title={known ? "Cluster matched" : "No matching cluster — will be skipped"}>
-   
+                                  {n}
+                                </span>
+                              );
+                            })}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              ))}
+            </div>
+
+            {stats && (
+              <div className="rounded-lg border border-border bg-muted p-3 text-sm space-y-2">
+                <div className="font-semibold">Preview Summary</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>Total Questions: <strong>{stats.total}</strong></div>
+                  <div>With Weights: <strong>{stats.withWeights}</strong></div>
+                </div>
+                {stats.matched.length > 0 && (
+                  <div className="text-xs">
+                    <strong className="text-success">Matched Clusters:</strong> {stats.matched.join(", ")}
+                  </div>
+                )}
+                {stats.unknown.length > 0 && (
+                  <div className="text-xs">
+                    <strong className="text-destructive">New Clusters to Create:</strong> {stats.unknown.join(", ")}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <Checkbox id="weights" checked={applyWeights} onCheckedChange={(v) => setApplyWeights(!!v)} />
+              <Label htmlFor="weights" className="text-sm cursor-pointer">
+                Auto-create missing clusters and import weights
+              </Label>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { reset(); setPreview(null); }}>Back</Button>
+              <Button onClick={apply} disabled={busy}>
+                {busy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null} Confirm Import
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function normalizeJson(data: any): ParsedSection[] {
+  if (!data) return [];
+  if (Array.isArray(data)) return data.map((s) => ({ title: s.title || "Untitled", description: s.description, questions: (s.questions || []).map((q: any) => ({ statement: q.statement || q.question || "", weights: q.weights })) }));
+  if ("sections" in data) return normalizeJson(data.sections);
+  if ("title" in data || "statement" in data) return [{ title: (data as any).title || "Untitled", description: (data as any).description, questions: [{ statement: (data as any).statement || (data as any).question || "", weights: (data as any).weights }] }];
+  return [];
+}
