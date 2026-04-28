@@ -24,10 +24,11 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
   const [preview, setPreview] = useState<ParsedSection[] | null>(null);
   const [clusters, setClusters] = useState<CareerCluster[]>([]);
   const [applyWeights, setApplyWeights] = useState(true);
+  const [replaceClusters, setReplaceClusters] = useState(false);
 
   useEffect(() => { if (open) fetchClusters(questionnaireId).then(setClusters).catch(() => {}); }, [open, questionnaireId]);
 
-  const reset = () => { setFile(null); setJsonText(""); setPreview(null); setApplyWeights(true); };
+  const reset = () => { setFile(null); setJsonText(""); setPreview(null); setApplyWeights(true); setReplaceClusters(false); };
 
   // Build cluster name → id map (case-insensitive)
   const clusterIdByName = useMemo(() => {
@@ -100,6 +101,43 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
     if (!preview) return;
     setBusy(true);
     try {
+      // Build effective name -> cluster_id map for THIS questionnaire.
+      let effectiveMap = new Map(clusterIdByName);
+
+      // If the user opted to replace clusters with the ones detected in the document:
+      if (applyWeights && replaceClusters && stats?.unknown.length) {
+        // 1. Delete existing questionnaire-scoped clusters + their junctions + weights.
+        for (const c of clusters) {
+          await supabase.from("questionnaire_clusters").delete()
+            .eq("questionnaire_id", questionnaireId)
+            .eq("career_cluster_id", c.id);
+          if ((c as any).questionnaire_id === questionnaireId) {
+            await supabase.from("answer_weights").delete().eq("career_cluster_id", c.id);
+            await supabase.from("career_clusters").delete().eq("id", c.id);
+          }
+        }
+        // 2. Create fresh clusters from EVERY detected name in the import (matched + unmatched).
+        const allDetected = new Set<string>([...stats.matched, ...stats.unknown]);
+        const colors = ["#4F46E5","#DC2626","#0EA5E9","#10B981","#F59E0B","#8B5CF6","#EC4899"];
+        let i = 0;
+        effectiveMap = new Map();
+        for (const name of allDetected) {
+          const { data, error } = await supabase.from("career_clusters").insert({
+            name,
+            icon_emoji: "✨",
+            description: "",
+            possible_careers: [],
+            color_hex: colors[i++ % colors.length],
+            questionnaire_id: questionnaireId,
+          } as any).select().single();
+          if (error) throw error;
+          await supabase.from("questionnaire_clusters").insert({
+            questionnaire_id: questionnaireId, career_cluster_id: data.id,
+          });
+          effectiveMap.set(name.trim().toLowerCase(), data.id);
+        }
+      }
+
       const { data: existing } = await supabase.from("sections").select("order_index").eq("questionnaire_id", questionnaireId).order("order_index", { ascending: false }).limit(1);
       let nextOrder = (existing?.[0]?.order_index ?? -1) + 1;
       let weightRows: { question_id: string; career_cluster_id: string; weight: number }[] = [];
@@ -119,7 +157,7 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
             const w = sec.questions[i]?.weights;
             if (!w) return;
             for (const [name, val] of Object.entries(w)) {
-              const cid = clusterIdByName.get(name.trim().toLowerCase());
+              const cid = effectiveMap.get(name.trim().toLowerCase());
               if (!cid) continue;
               const num = Number(val);
               if (!Number.isFinite(num)) continue;
@@ -135,7 +173,7 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
       }
 
       const totalQ = preview.reduce((s, x) => s + x.questions.length, 0);
-      toast.success(`Imported ${totalQ} questions${weightRows.length ? ` and ${weightRows.length} weights` : ""}.`);
+      toast.success(`Imported ${totalQ} questions${weightRows.length ? ` and ${weightRows.length} weights` : ""}${replaceClusters && applyWeights ? " — categories replaced." : ""}.`);
       onImported();
       onOpenChange(false);
       reset();
@@ -221,8 +259,7 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
               </div>
               {stats && stats.unknown.length > 0 && (
                 <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-destructive">
-                  Unknown cluster name{stats.unknown.length === 1 ? "" : "s"} — these weights will be skipped: {stats.unknown.join(", ")}.
-                  Add or rename matching clusters in the <em>Clusters</em> tab to import them.
+                  New category name{stats.unknown.length === 1 ? "" : "s"} detected (no match on this questionnaire): <strong>{stats.unknown.join(", ")}</strong>. Tick <em>Replace categories</em> below to make the document's categories the source of truth, or add matching ones manually in the <em>Clusters</em> tab.
                 </div>
               )}
             </div>
@@ -233,6 +270,18 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
                 <div>
                   <div className="flex items-center gap-1.5 font-medium"><Scale className="h-3.5 w-3.5" /> Also apply detected weights</div>
                   <div className="text-xs text-muted-foreground">Questions are imported automatically. Weights are only applied with your consent so you can review them first.</div>
+                </div>
+              </label>
+            )}
+
+            {stats && stats.unknown.length > 0 && applyWeights && (
+              <label className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm">
+                <Checkbox checked={replaceClusters} onCheckedChange={(v) => setReplaceClusters(!!v)} className="mt-0.5" />
+                <div>
+                  <div className="flex items-center gap-1.5 font-medium text-destructive">⚠ Replace categories with the ones in this document</div>
+                  <div className="text-xs text-muted-foreground">
+                    This <strong>deletes the current categories on this questionnaire</strong> (and their existing weights) and creates fresh ones from every category name found in the import. Other questionnaires are untouched.
+                  </div>
                 </div>
               </label>
             )}

@@ -1,5 +1,5 @@
 import { PageShell } from "@/components/AppLayout";
-import { Compass, FileQuestion, Layers, Scale, Sparkles, Upload, Eye, BarChart3, MessageSquare, Trophy } from "lucide-react";
+import { Compass, FileQuestion, Layers, Scale, Sparkles, Upload, Eye, BarChart3, MessageSquare, Trophy, ClipboardList, Users } from "lucide-react";
 
 export default function SetterManual() {
   return (
@@ -7,96 +7,135 @@ export default function SetterManual() {
       <div className="mx-auto max-w-3xl space-y-6">
         <div className="rounded-2xl gradient-setter p-6 text-setter-foreground shadow-glow">
           <h1 className="font-display text-3xl font-semibold">LASS Career Path · Counsellor Manual</h1>
-          <p className="mt-1 text-sm opacity-90">The school counsellor account (<strong>counsellor@lightacademy.ac.ug</strong>) is the only setter for this site. Use this manual to design, score, publish and review the Light Academy career inventory.</p>
+          <p className="mt-1 text-sm opacity-90">The school counsellor account (<strong>counsellor@lightacademy.ac.ug</strong>) is the only setter for this site. Use this manual end-to-end to design, score, publish, and review any inventory at Light Academy.</p>
         </div>
 
         <Section icon={<Sparkles className="h-5 w-5" />} title="0. About this build">
-          Students self-register with their <strong>name, class and stream</strong>. Only the counsellor account can edit questionnaires and view results. Use the <strong>Results</strong> link in the header to see all submissions, filtered by class and stream.
+          Students self-register with their <strong>name, class and stream</strong>. Only the counsellor account can edit questionnaires and view results. Use the <strong>Results</strong> link in the header for a school-wide view (filtered by class & stream), or open <strong>Analytics</strong> on a single questionnaire for its own stats. From either view you can open a student's <strong>full individual report</strong>.
         </Section>
 
         <Section icon={<FileQuestion className="h-5 w-5" />} title="1. Create a questionnaire">
-          From your dashboard, click <strong>New Questionnaire</strong>. You'll land in the editor with 4 tabs: <em>Details, Content, Clusters, Weights</em>. Edits autosave as you type. There's also a pre-built sample called <strong>“Light Academy Career Inventory”</strong> you can study or duplicate.
+          From your dashboard, click <strong>New Questionnaire</strong>. The editor has 4 tabs: <em>Details, Content, Clusters, Weights</em>. Edits autosave as you type.
         </Section>
 
         <Section icon={<Layers className="h-5 w-5" />} title="2. Add sections & questions">
-          In <strong>Content</strong>, add sections (e.g. <em>Section A — Interests</em>, <em>Section B — Strengths</em>, <em>Section C — Values</em>). Inside each section, add Likert-style statements students will rate from 1 (Strongly Disagree) to 5 (Strongly Agree). Drag the handle to reorder anything.
+          In <strong>Content</strong>, add sections and Likert-style statements (rated 1–5). Drag the handle to reorder.
           <div className="mt-3 rounded-lg bg-accent p-3 text-sm">
-            <strong>Statement style tip:</strong> Write in the first person — <em>“I enjoy…”</em>, <em>“I am good at…”</em>, <em>“I want a career where…”</em>. Keep statements under 25 words and focused on one idea each.
+            <strong>Tip:</strong> Use first-person phrasing — <em>“I enjoy…”</em>, <em>“I am good at…”</em>. Keep statements under 25 words, one idea each.
           </div>
         </Section>
 
-        <Section icon={<Compass className="h-5 w-5" />} title="3. Manage clusters (categories)">
-          Six career clusters are pre-loaded (Science & Engineering, Helping & People, Practical & Hands-on, Creative & Expressive, Leadership & Communication, Technology & Innovation), but <strong>clusters don't have to be careers</strong>. They are simply the categories a questionnaire scores on — you can repurpose them for learning styles (Visual / Auditory / Kinesthetic), personality traits, values, study habits, or anything else. Edit names, emojis, descriptions, and the list of "possible careers" (or rename that field's contents to suggested study tips, recommended subjects, etc.).
+        <Section icon={<Compass className="h-5 w-5" />} title="3. Categories — independent per questionnaire">
+          Categories (a.k.a. clusters) are the buckets students get scored on. They can be careers, learning styles, personality traits, values — anything.
+          <div className="mt-3 rounded-lg border border-setter/30 bg-setter/5 p-3 text-sm space-y-1">
+            <div><strong>🔒 Each questionnaire owns its own categories.</strong> Renaming, editing or deleting a category here will <em>never</em> change another questionnaire.</div>
+            <div><strong>Create custom category</strong> — make a brand-new category that exists only on this questionnaire.</div>
+            <div><strong>Start from a template</strong> — picking one of the suggested templates makes a <em>private copy</em> for this questionnaire (so editing it stays local).</div>
+            <div>Removing a custom category deletes it for good (and removes its weights). Removing a template-clone is the same — only this questionnaire is affected.</div>
+          </div>
         </Section>
 
         <Section icon={<Scale className="h-5 w-5" />} title="4. The marking grid (Weights — the most important step)">
-          In <strong>Weights</strong>, give each question a weight for each cluster. This is the <strong>marking grid</strong> that turns a student's 1–5 answer into cluster scores.
+          In <strong>Weights</strong>, give each question a weight for each category. This is the <strong>marking grid</strong> that turns a 1–5 answer into category scores.
           <div className="mt-3 rounded-lg bg-accent p-3 text-sm">
             <strong>Scoring formula:</strong> <code>contribution = student_rating × question_weight</code><br />
-            <strong>Example:</strong> Student picks <em>Strongly Agree (5)</em> on a question with weight <em>4</em> for a cluster → <code>5 × 4 = 20 points</code> added to that cluster.
-            <br /><br />
-            We then <strong>sum every contribution</strong> per cluster and rank them. The cluster with the highest total is the student's strongest match.
+            <strong>Example:</strong> Student picks <em>Strongly Agree (5)</em> on a question with weight <em>4</em> for a category → <code>5 × 4 = 20 points</code>.
+            All contributions are summed per category and ranked. Top category = strongest match.
           </div>
           <div className="mt-3 rounded-lg border border-setter/30 bg-setter/5 p-3 text-sm">
-            <strong>Flexible scale:</strong> Weights are now a free numeric input (any non-negative integer). Use whatever scale suits your inventory:
-            <ul className="mt-1 list-disc pl-5">
-              <li><strong>0–3</strong> — quick coarse mapping.</li>
-              <li><strong>0–5</strong> — the classic default; works well for most career inventories.</li>
-              <li><strong>0–10 or higher</strong> — when you want fine-grained influence or to mirror an existing scoring sheet exactly.</li>
-            </ul>
-            The scale you choose only needs to be <em>consistent within a single questionnaire</em>; cluster percentages are calculated relative to the maximum possible for that questionnaire, so big numbers won't break the ranking.
+            <strong>Flexible scale:</strong> Weights are a free numeric input (any non-negative integer). Use 0–3, 0–5, 0–10, or whatever the source document uses. The scale only needs to be <em>consistent within a single questionnaire</em>.
           </div>
-          <ul className="mt-3 list-disc pl-5 text-sm">
-            <li><strong>0</strong> — this question doesn't relate to that cluster.</li>
-            <li><strong>Low values</strong> — weak / secondary signal.</li>
-            <li><strong>Mid values</strong> — moderate signal.</li>
-            <li><strong>High values</strong> — strong / primary indicator for that cluster.</li>
-          </ul>
         </Section>
 
-        <Section icon={<Upload className="h-5 w-5" />} title="5. Bulk import (JSON / PDF / DOCX / XLSX) — adaptive clusters & weights">
-          Click <strong>Import</strong> in the editor toolbar to upload a file or paste JSON. The system extracts sections, questions <strong>and (when present) the category weights at the exact scale used in the source document</strong>, and shows you a preview before anything is added.
-          <ul className="mt-2 list-disc pl-5 text-sm">
-            <li><strong>JSON:</strong> <code>{`{ "sections": [{ "title": "Interests", "questions": [{ "statement": "I enjoy…", "weights": { "Visual": 3, "Auditory": 1 } }] }] }`}</code> — the <code>weights</code> field is optional, and category names can be anything (career clusters, learning styles, personality traits…).</li>
-            <li><strong>XLSX:</strong> Row 1 headers <code>Section | Question | &lt;Category 1&gt; | &lt;Category 2&gt; | …</code>. Each category column holds a non-negative integer weight at whatever scale your sheet uses.</li>
-            <li><strong>PDF / DOCX:</strong> AI extracts sections and questions; if the document contains a scoring grid the category weights are pulled too, preserved exactly as written (no re-scaling, no clamping to 0–5).</li>
+        <Section icon={<Upload className="h-5 w-5" />} title="5. Bulk import (JSON / PDF / DOCX / XLSX) — adaptive categories & weights">
+          Click <strong>Import</strong> in the editor toolbar to upload a file or paste JSON. The system extracts sections, questions, and (when present) the category weights at the exact scale used in the source document, then shows a preview before anything is added.
+
+          <div className="mt-3 rounded-lg bg-accent p-3 text-sm">
+            <strong>Updated JSON format (current):</strong>
+            <pre className="mt-2 overflow-auto rounded bg-background p-2 text-[11px]">{`{
+  "sections": [
+    {
+      "title": "Section A — Interests",
+      "description": "Optional",
+      "questions": [
+        {
+          "statement": "I enjoy solving puzzles.",
+          "weights": {
+            "Visual Learner": 3,
+            "Auditory Learner": 1,
+            "Kinesthetic Learner": 0
+          }
+        },
+        {
+          "statement": "I learn best by doing.",
+          "weights": { "Kinesthetic Learner": 5, "Visual Learner": 1 }
+        }
+      ]
+    }
+  ]
+}`}</pre>
+            <ul className="mt-2 list-disc pl-5 text-xs">
+              <li>Category names inside <code>weights</code> can be <strong>anything</strong> — they are matched (case-insensitive) against this questionnaire's existing categories.</li>
+              <li>Integers only, any non-negative scale. The numbers are preserved exactly.</li>
+              <li>Both <code>weights</code> and <code>description</code> are optional.</li>
+            </ul>
+          </div>
+
+          <ul className="mt-3 list-disc pl-5 text-sm">
+            <li><strong>XLSX:</strong> Row 1 headers <code>Section | Question | &lt;Category 1&gt; | &lt;Category 2&gt; | …</code>.</li>
+            <li><strong>PDF / DOCX:</strong> AI extracts sections + questions; if a scoring grid is present the category weights are pulled too.</li>
           </ul>
-          <div className="mt-3 rounded-lg bg-accent p-3 text-sm space-y-1">
-            <div><strong>How consent works:</strong> Questions are imported automatically, but <strong>weights are only applied if you tick the “Also apply detected weights” box on the preview screen.</strong> This lets you eyeball a scoring grid before it overwrites anything.</div>
-            <div><strong>Cluster matching:</strong> Weight column / key names are matched (case-insensitive) against your existing clusters. Unmatched names are highlighted in red on the preview and silently skipped — fix them by adding/renaming clusters in the <em>Clusters</em> tab and re-importing.</div>
-            <div><strong>Weights only?</strong> If you only want to update weights for existing questions, use the AI Assistant (<em>“Set the weight for question 3 on Visual to 7”</em>) — bulk import always appends new sections.</div>
+
+          <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm space-y-2">
+            <div><strong>🆕 New: Replace categories on import.</strong> When the document contains category names that don't exist on this questionnaire yet, the preview shows them in red. You then have two consent toggles:</div>
+            <ul className="list-disc pl-5 text-xs">
+              <li><strong>Also apply detected weights</strong> — applies the weights that match existing categories.</li>
+              <li><strong>⚠ Replace categories with the ones in this document</strong> — <em>deletes the current categories on this questionnaire</em> (and their weights) and creates fresh categories from <em>every</em> name found in the import. This is scoped to <strong>this questionnaire only</strong> — other questionnaires are untouched.</li>
+            </ul>
+            <div>Use replace when you're importing a brand-new inventory whose categories should fully take over.</div>
           </div>
         </Section>
 
         <Section icon={<MessageSquare className="h-5 w-5" />} title="6. AI Assistant — open chat, persistent memory, propose-then-confirm">
-          Click <strong>AI Assistant</strong> in the editor to open a free-form chat. It can read your full questionnaire (sections, questions, weights) and you can talk to it like a colleague:
-          <ul className="mt-2 list-disc pl-5 text-sm">
-            <li>Ask for opinions: <em>“Is this balanced across all 6 clusters?”</em></li>
-            <li>Ask for analysis: <em>“Which questions are too vague?”</em>, <em>“Why does Section C lean toward Helping?”</em></li>
-            <li>Brainstorm: <em>“Suggest 3 questions about resilience for Year 10 students.”</em></li>
-            <li>Make changes: <em>“Add 3 teamwork questions to Section B,”</em> <em>“Set question 4's weight for Technology to 5,”</em> <em>“Rewrite question 7 to be more specific.”</em></li>
-          </ul>
-          <div className="mt-3 rounded-lg bg-accent p-3 text-sm">
-            Whenever the assistant proposes an actual edit, you'll see a <strong>“Proposed changes”</strong> card. Click <strong>Apply</strong> to commit, or <strong>Reject</strong> to discard. Pure chat or analysis won't trigger a proposal.
-          </div>
+          Click <strong>AI Assistant</strong> for a free-form chat partner. Ask for opinions, analysis, brainstorming, or actual edits (it shows <em>Proposed changes</em> you must Apply or Reject).
           <div className="mt-3 rounded-lg border border-setter/30 bg-setter/5 p-3 text-sm space-y-1">
-            <div><strong>🧠 Memory:</strong> The assistant now remembers your conversation <em>per questionnaire</em> across sessions (stored locally in your browser). Older turns are automatically <strong>summarised</strong> into a short memory note so the chat never grows stale.</div>
-            <div><strong>🔄 Always fresh:</strong> Every time you click <em>Apply</em>, the editor reloads and the assistant immediately gets the new snapshot — including new IDs, statements and weights — so its next suggestion never references stale data.</div>
-            <div><strong>Reset:</strong> Use the <em>Reset memory</em> button in the panel header to wipe the conversation and the summary for this questionnaire.</div>
+            <div><strong>🧠 Memory:</strong> remembered per questionnaire across sessions; older turns are auto-summarised.</div>
+            <div><strong>🔄 Always fresh:</strong> the assistant gets a new snapshot after every Apply.</div>
+            <div><strong>Reset memory</strong> wipes both the chat and the summary for this questionnaire.</div>
           </div>
         </Section>
 
-
         <Section icon={<Eye className="h-5 w-5" />} title="7. Publish to students">
-          When ready, toggle <strong>Published</strong>. Only published questionnaires appear on student dashboards. You can switch back to draft any time without losing responses.
+          Toggle <strong>Published</strong>. Only published questionnaires appear on student dashboards. You can switch back to draft any time without losing responses.
         </Section>
 
         <Section icon={<Trophy className="h-5 w-5" />} title="8. What students see">
-          Students go through a <strong>one-question-at-a-time</strong> flow with auto-advance, smooth transitions between sections and a progress bar. After submission they get a celebratory results page with a radar chart, ranked clusters, three personalised insight cards and a <strong>Download PDF</strong> button.
+          Students answer one statement at a time with auto-advance and smooth section transitions. After submission they get a celebratory results page with a radar chart, ranked categories, three personalised insight cards and a <strong>Download PDF</strong> button.
         </Section>
 
-        <Section icon={<BarChart3 className="h-5 w-5" />} title="9. View analytics">
-          From the dashboard, open <strong>Analytics</strong> on any questionnaire to see total responses, average scores per cluster (bar chart), the most common top cluster, and an individual response table with name, class, date, and top cluster. Click <strong>Export CSV</strong> for a full spreadsheet (one row per student, one column per cluster).
+        <Section icon={<Users className="h-5 w-5" />} title="9. Results — school-wide view">
+          From the header, open <strong>Results</strong>. You'll see:
+          <ul className="mt-2 list-disc pl-5 text-sm">
+            <li><strong>Filters</strong> for class, stream and questionnaire — these flow through every panel.</li>
+            <li><strong>Aggregated category results</strong> — average score per category for the filtered cohort, with a horizontal bar for quick comparison. Tip: pick a single questionnaire in the filter for the cleanest view, since different questionnaires use different categories.</li>
+            <li><strong>Submissions grouped by class · stream</strong> — every student in that group with their top category and score.</li>
+            <li><strong>Export CSV</strong> — every student × every category column.</li>
+          </ul>
+        </Section>
+
+        <Section icon={<ClipboardList className="h-5 w-5" />} title="10. Individual student reports">
+          From <strong>Results</strong> or from any questionnaire's <strong>Analytics</strong>, click <em>View</em> on a row to open the student's full report:
+          <ul className="mt-2 list-disc pl-5 text-sm">
+            <li>Hero card with strongest category and top score.</li>
+            <li>Radar + bar charts of every category.</li>
+            <li>Personalised insight cards.</li>
+            <li>Ranked accordion for every category (description + suggested next steps).</li>
+            <li><strong>Every answer</strong> the student picked, listed section by section with the rating colour-coded — perfect for one-on-one counselling sessions and progress tracking.</li>
+          </ul>
+        </Section>
+
+        <Section icon={<BarChart3 className="h-5 w-5" />} title="11. Per-questionnaire analytics">
+          Open <strong>Analytics</strong> on any questionnaire for total responses, average score per category (bar chart), most common top category, and the response table. Use <em>Export CSV</em> for a spreadsheet (one row per student, one column per category).
         </Section>
       </div>
     </PageShell>
