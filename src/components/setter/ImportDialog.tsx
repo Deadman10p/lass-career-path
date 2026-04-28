@@ -259,8 +259,7 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
               </div>
               {stats && stats.unknown.length > 0 && (
                 <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-destructive">
-                  Unknown cluster name{stats.unknown.length === 1 ? "" : "s"} — these weights will be skipped: {stats.unknown.join(", ")}.
-                  Add or rename matching clusters in the <em>Clusters</em> tab to import them.
+                  New category name{stats.unknown.length === 1 ? "" : "s"} detected (no match on this questionnaire): <strong>{stats.unknown.join(", ")}</strong>. Tick <em>Replace categories</em> below to make the document's categories the source of truth, or add matching ones manually in the <em>Clusters</em> tab.
                 </div>
               )}
             </div>
@@ -271,6 +270,18 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
                 <div>
                   <div className="flex items-center gap-1.5 font-medium"><Scale className="h-3.5 w-3.5" /> Also apply detected weights</div>
                   <div className="text-xs text-muted-foreground">Questions are imported automatically. Weights are only applied with your consent so you can review them first.</div>
+                </div>
+              </label>
+            )}
+
+            {stats && stats.unknown.length > 0 && applyWeights && (
+              <label className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm">
+                <Checkbox checked={replaceClusters} onCheckedChange={(v) => setReplaceClusters(!!v)} className="mt-0.5" />
+                <div>
+                  <div className="flex items-center gap-1.5 font-medium text-destructive">⚠ Replace categories with the ones in this document</div>
+                  <div className="text-xs text-muted-foreground">
+                    This <strong>deletes the current categories on this questionnaire</strong> (and their existing weights) and creates fresh ones from every category name found in the import. Other questionnaires are untouched.
+                  </div>
                 </div>
               </label>
             )}
