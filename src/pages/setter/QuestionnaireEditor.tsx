@@ -38,10 +38,17 @@ export default function QuestionnaireEditor() {
 
   const reload = async () => {
     setLoading(true);
-    const [d, cs] = await Promise.all([fetchFullQuestionnaire(id), fetchClusters(id)]);
-    setDoc(d);
-    setClusters(cs);
-    setLoading(false);
+    try {
+      console.log("Reloading questionnaire:", id);
+      const [d, cs] = await Promise.all([fetchFullQuestionnaire(id), fetchClusters(id)]);
+      console.log("Loaded clusters:", cs);
+      setDoc(d);
+      setClusters(cs);
+    } catch (err) {
+      console.error("Failed to reload:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { reload(); }, [id]);

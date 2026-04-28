@@ -42,11 +42,17 @@ export default function SetterDashboard() {
   const handleDelete = async (qId: string, title: string) => {
     if (!confirm(`Are you sure you want to delete "${title}"? This will also delete all sections, questions, and responses.`)) return;
     try {
+      console.log("Deleting questionnaire:", qId);
       const { error } = await supabase.from("questionnaires").delete().eq("id", qId);
-      if (error) throw error;
+      if (error) {
+        console.error("Delete error:", error);
+        throw error;
+      }
+      console.log("Delete successful, reloading...");
       toast.success("Questionnaire deleted");
       load();
     } catch (e: any) {
+      console.error("Delete failed:", e);
       toast.error(e.message || "Failed to delete");
     }
   };

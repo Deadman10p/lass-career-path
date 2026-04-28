@@ -51,12 +51,12 @@ export default function SetterManual() {
           Click <strong>Import</strong> in the editor toolbar to upload a file or paste JSON. The system extracts sections, questions, and (when present) the category weights at the exact scale used in the source document, then shows a preview before anything is added.
 
           <div className="mt-3 rounded-lg bg-accent p-3 text-sm">
-            <strong>Updated JSON format (current):</strong>
+            <strong>Simple JSON format:</strong>
             <pre className="mt-2 overflow-auto rounded bg-background p-2 text-[11px]">{`{
   "sections": [
     {
       "title": "Section A — Interests",
-      "description": "Optional",
+      "description": "Optional section description",
       "questions": [
         {
           "statement": "I enjoy solving puzzles.",
@@ -78,6 +78,55 @@ export default function SetterManual() {
               <li>Category names inside <code>weights</code> can be <strong>anything</strong> — they are matched (case-insensitive) against this questionnaire's existing categories.</li>
               <li>Integers only, any non-negative scale. The numbers are preserved exactly.</li>
               <li>Both <code>weights</code> and <code>description</code> are optional.</li>
+            </ul>
+          </div>
+
+          <div className="mt-3 rounded-lg bg-primary/5 p-3 text-sm border border-primary/30">
+            <strong>🆕 Enhanced JSON with cluster metadata (emoji, description, careers):</strong>
+            <pre className="mt-2 overflow-auto rounded bg-background p-2 text-[11px]">{`{
+  "sections": [
+    {
+      "title": "Career Interests",
+      "questions": [
+        {
+          "statement": "I love working with numbers and data.",
+          "weights": {
+            "STEM": {
+              "value": 5,
+              "icon_emoji": "🔬",
+              "description": "Science, Technology, Engineering & Mathematics careers",
+              "possible_careers": ["Data Scientist", "Software Engineer", "Research Scientist"]
+            }
+          }
+        },
+        {
+          "statement": "I enjoy helping people solve their problems.",
+          "weights": {
+            "Healthcare": {
+              "value": 4,
+              "icon_emoji": "🏥",
+              "description": "Health and medical professions",
+              "possible_careers": ["Doctor", "Nurse", "Therapist"]
+            },
+            "Education": {
+              "value": 3,
+              "icon_emoji": "📚",
+              "description": "Teaching and educational roles",
+              "possible_careers": ["Teacher", "Counselor", "Trainer"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}`}</pre>
+            <ul className="mt-2 list-disc pl-5 text-xs">
+              <li>Use an <strong>object</strong> instead of a number to include emoji, description, and career suggestions.</li>
+              <li><code>value</code>: the weight (required if using object format)</li>
+              <li><code>icon_emoji</code>: emoji for the cluster (defaults to ✨)</li>
+              <li><code>description</code>: what this cluster means (shown in results)</li>
+              <li><code>possible_careers</code>: array of suggested careers/next steps</li>
+              <li>New clusters will be auto-created with all this metadata when you import!</li>
             </ul>
           </div>
 
