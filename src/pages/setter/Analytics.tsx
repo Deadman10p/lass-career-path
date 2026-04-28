@@ -168,6 +168,7 @@ export default function Analytics() {
                   <TableHead>Submitted</TableHead>
                   <TableHead>Top cluster</TableHead>
                   <TableHead className="text-right">Top score</TableHead>
+                  <TableHead className="w-[1%] text-right">Report</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -178,6 +179,11 @@ export default function Analytics() {
                     <TableCell className="text-muted-foreground">{new Date(r.submitted_at).toLocaleString()}</TableCell>
                     <TableCell><Badge variant="secondary">{r.topCluster ?? "—"}</Badge></TableCell>
                     <TableCell className="text-right tabular-nums">{r.topScore ?? "—"}</TableCell>
+                    <TableCell className="text-right">
+                      <Button asChild size="sm" variant="outline">
+                        <Link to={`/setter/response/${r.id}`}>View</Link>
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
