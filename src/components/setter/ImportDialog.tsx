@@ -13,6 +13,7 @@ import type { CareerCluster } from "@/lib/types";
 
 interface ParsedQuestion { statement: string; weights?: Record<string, number> }
 interface ParsedSection { title: string; description?: string; questions: ParsedQuestion[] }
+interface ClusterInfo { name: string; icon_emoji?: string; description?: string; possible_careers?: string[] }
 
 export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }: {
   open: boolean; onOpenChange: (v: boolean) => void; questionnaireId: string; onImported: () => void;
@@ -24,10 +25,11 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
   const [preview, setPreview] = useState<ParsedSection[] | null>(null);
   const [clusters, setClusters] = useState<CareerCluster[]>([]);
   const [applyWeights, setApplyWeights] = useState(true);
+  const [detectedClusters, setDetectedClusters] = useState<Map<string, ClusterInfo>>(new Map());
 
   useEffect(() => { if (open) fetchClusters(questionnaireId).then(setClusters).catch(() => {}); }, [open, questionnaireId]);
 
-  const reset = () => { setFile(null); setJsonText(""); setPreview(null); setApplyWeights(true); };
+  const reset = () => { setFile(null); setJsonText(""); setPreview(null); setApplyWeights(true); setDetectedClusters(new Map()); };
 
   // Build cluster name → id map (case-insensitive)
   const clusterIdByName = useMemo(() => {
@@ -36,24 +38,45 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
     return m;
   }, [clusters]);
 
-  // Stats for preview - collect all detected cluster names from weights
+  // Stats for preview - collect all detected cluster names from weights with metadata
   const stats = useMemo(() => {
     if (!preview) return null;
     let total = 0, withWeights = 0;
     const allDetected = new Set<string>();
     const unknown = new Set<string>();
     const matched = new Set<string>();
+    const clusterInfoMap = new Map<string, ClusterInfo>();
+    
     preview.forEach(s => s.questions.forEach(q => {
       total++;
       if (q.weights && Object.keys(q.weights).length) {
         withWeights++;
         Object.keys(q.weights).forEach(name => {
           allDetected.add(name);
-          if (clusterIdByName.has(name.trim().toLowerCase())) matched.add(name);
-          else unknown.add(name);
+          if (clusterIdByName.has(name.trim().toLowerCase())) {
+            matched.add(name);
+          } else {
+            unknown.add(name);
+            // Extract cluster info from first occurrence
+            if (!clusterInfoMap.has(name)) {
+              // Try to get emoji and description from the weight value if it's an object
+              const weightVal = q.weights![name];
+              if (typeof weightVal === 'object' && weightVal !== null) {
+                clusterInfoMap.set(name, {
+                  name,
+                  icon_emoji: (weightVal as any).icon_emoji ?? '✨',
+                  description: (weightVal as any).description ?? '',
+                  possible_careers: (weightVal as any).possible_careers ?? []
+                });
+              } else {
+                clusterInfoMap.set(name, { name, icon_emoji: '✨', description: '', possible_careers: [] });
+              }
+            }
+          }
         });
       }
     }));
+    setDetectedClusters(clusterInfoMap);
     return { total, withWeights, unknown: [...unknown], matched: [...matched], allDetected: [...allDetected] };
   }, [preview, clusterIdByName]);
 
@@ -110,24 +133,67 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
         const colors = ["#4F46E5","#DC2626","#0EA5E9","#10B981","#F59E0B","#8B5CF6","#EC4899"];
         let colorIndex = clusters.length % colors.length;
         
+        console.log("Starting cluster auto-creation. Detected clusters:", stats.allDetected);
+        console.log("Existing clusters map:", Array.from(effectiveMap.entries()));
+        console.log("Detected cluster info:", Array.from(detectedClusters.entries()));
+        
         // Create any missing clusters
         for (const name of stats.allDetected) {
-          if (!effectiveMap.has(name.trim().toLowerCase())) {
+          const normalizedName = name.trim().toLowerCase();
+          console.log("Processing cluster:", name, "normalized:", normalizedName);
+          
+          if (!effectiveMap.has(normalizedName)) {
+            // Get cluster info from detectedClusters map
+            const clusterInfo = detectedClusters.get(name) ?? { name, icon_emoji: '✨', description: '', possible_careers: [] };
+            console.log("Creating new cluster:", name, "with info:", clusterInfo);
+            
             const { data, error } = await supabase.from("career_clusters").insert({
               name,
-              icon_emoji: "✨",
-              description: "Auto-created from import",
-              possible_careers: [],
+              icon_emoji: clusterInfo.icon_emoji ?? '✨',
+              description: clusterInfo.description ?? `Auto-created from import`,
+              possible_careers: clusterInfo.possible_careers ?? [],
               color_hex: colors[colorIndex++ % colors.length],
               questionnaire_id: questionnaireId,
             } as any).select().single();
-            if (error) throw error;
-            await supabase.from("questionnaire_clusters").insert({
-              questionnaire_id: questionnaireId, career_cluster_id: data.id,
-            });
-            effectiveMap.set(name.trim().toLowerCase(), data.id);
+            
+            if (error) {
+              console.error("Failed to create cluster:", error);
+              throw error;
+            }
+            
+            console.log("Cluster created successfully:", name, "ID:", data.id);
+            
+            // Check if junction already exists before inserting
+            const { data: existingJunction } = await supabase
+              .from("questionnaire_clusters")
+              .select("id")
+              .eq("questionnaire_id", questionnaireId)
+              .eq("career_cluster_id", data.id)
+              .maybeSingle();
+            
+            if (!existingJunction) {
+              console.log("Creating junction for cluster:", name);
+              const junctionResult = await supabase.from("questionnaire_clusters").insert({
+                questionnaire_id: questionnaireId, career_cluster_id: data.id,
+              });
+              
+              if (junctionResult.error) {
+                console.error("Failed to create junction:", junctionResult.error);
+                throw junctionResult.error;
+              }
+              console.log("Junction created successfully for:", name);
+            } else {
+              console.log("Junction already exists for:", name);
+            }
+            
+            effectiveMap.set(normalizedName, data.id);
+            console.log("Updated effectiveMap. Now has:", Array.from(effectiveMap.entries()));
+          } else {
+            console.log("Cluster already exists in map:", name);
           }
         }
+        
+        console.log("Final effectiveMap after auto-creation:", Array.from(effectiveMap.entries()));
       }
 
       const { data: existing } = await supabase.from("sections").select("order_index").eq("questionnaire_id", questionnaireId).order("order_index", { ascending: false }).limit(1);
@@ -151,7 +217,13 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
             for (const [name, val] of Object.entries(w)) {
               const cid = effectiveMap.get(name.trim().toLowerCase());
               if (!cid) continue;
-              const num = Number(val);
+              // Handle both simple number weights and detailed object format
+              let num: number;
+              if (typeof val === 'object' && val !== null && 'value' in val) {
+                num = Number((val as any).value);
+              } else {
+                num = Number(val);
+              }
               if (!Number.isFinite(num)) continue;
               weightRows.push({ question_id: row.id, career_cluster_id: cid, weight: Math.max(0, Math.round(num)) });
             }
@@ -195,7 +267,8 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
                 <Label>Choose a file (JSON / PDF / DOCX / XLSX)</Label>
                 <Input type="file" accept=".json,.pdf,.docx,.xlsx,.xls" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
                 <div className="text-xs text-muted-foreground space-y-1">
-                  <div><strong>JSON:</strong> <code>{`{ "sections": [{ "title": "Interests", "questions": [{ "statement": "I enjoy…", "weights": { "Science & Engineering": 4 } }] }] }`}</code></div>
+                  <div><strong>Simple JSON:</strong> <code>{`{ "sections": [{ "title": "Interests", "questions": [{ "statement": "I enjoy…", "weights": { "Science & Engineering": 4 } }] }] }`}</code></div>
+                  <div><strong>Detailed JSON with cluster info:</strong> <code>{`{ "sections": [{ "title": "Interests", "questions": [{ "statement": "I love math", "weights": { "STEM": { "value": 5, "icon_emoji": "🔬", "description": "Science and technology careers", "possible_careers": ["Engineer", "Data Scientist"] } } }] }] }`}</code></div>
                   <div><strong>XLSX:</strong> Row 1 headers: <code>Section | Question | &lt;Cluster 1&gt; | &lt;Cluster 2&gt; | …</code> — weight columns are optional.</div>
                   <div><strong>PDF / DOCX:</strong> AI extracts sections and questions; if a scoring grid is present it will pull weights too.</div>
                 </div>
@@ -203,7 +276,10 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
             ) : (
               <div className="space-y-2">
                 <Label>JSON</Label>
-                <Textarea rows={10} value={jsonText} onChange={(e) => setJsonText(e.target.value)} placeholder='{"sections":[{"title":"Section A","questions":[{"statement":"I enjoy puzzles.","weights":{"Science & Engineering":5}}]}]}' className="font-mono text-xs" />
+                <Textarea rows={10} value={jsonText} onChange={(e) => setJsonText(e.target.value)} placeholder='{ "sections": [ { "title": "Career Interests", "questions": [ { "statement": "I love working with numbers", "weights": { "STEM": { "value": 5, "icon_emoji": "🔬", "description": "Science and technology careers", "possible_careers": ["Engineer", "Data Scientist"] } } }, { "statement": "I enjoy helping people", "weights": { "Healthcare": { "value": 4, "icon_emoji": "🏥", "description": "Medical professions", "possible_careers": ["Doctor", "Nurse"] }, "Education": 3 } } ] } ] }' className="font-mono text-xs" />
+                <div className="text-xs text-muted-foreground">
+                  <strong>Tip:</strong> Use simple weights like <code>{`{"STEM": 5}`}</code> or detailed format with emoji/description: <code>{`{"STEM": {"value": 5, "icon_emoji": "🔬", "description": "Science careers", "possible_careers": ["Engineer"]}}`}</code>
+                </div>
               </div>
             )}
             <DialogFooter>
@@ -231,65 +307,4 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
                               const known = clusterIdByName.has(n.trim().toLowerCase());
                               return (
                                 <span key={n} className={`rounded px-1.5 py-0.5 text-[10px] ${known ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"}`} title={known ? "Cluster matched" : "No matching cluster — will be skipped"}>
-                                  {n}: {w}
-                                </span>
-                              );
-                            })}
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              ))}
-            </div>
-
-            <div className="space-y-2 text-xs text-muted-foreground">
-              <div>
-                {preview.length} section{preview.length === 1 ? "" : "s"} · {stats?.total ?? 0} questions will be appended.
-                {stats && stats.withWeights > 0 && <> · <strong className="text-foreground">{stats.withWeights}</strong> include weights.</>}
-              </div>
-              {stats && stats.unknown.length > 0 && (
-                <div className="rounded-md border border-setter/30 bg-setter/10 p-2 text-foreground">
-                  New category name{stats.unknown.length === 1 ? "" : "s"} detected: <strong>{stats.unknown.join(", ")}</strong>. These will be auto-created when you import.
-                </div>
-              )}
-            </div>
-
-            {stats && stats.withWeights > 0 && (
-              <label className="flex items-start gap-2 rounded-lg border border-setter/30 bg-setter/5 p-3 text-sm">
-                <Checkbox checked={applyWeights} onCheckedChange={(v) => setApplyWeights(!!v)} className="mt-0.5" />
-                <div>
-                  <div className="flex items-center gap-1.5 font-medium"><Scale className="h-3.5 w-3.5" /> Also apply detected weights</div>
-                  <div className="text-xs text-muted-foreground">Questions are imported automatically. Weights are only applied with your consent so you can review them first. Any new categories in the weights will be auto-created.</div>
-                </div>
-              </label>
-            )}
-
-            <DialogFooter className="gap-2">
-              <Button variant="outline" onClick={() => setPreview(null)}>Back</Button>
-              <Button onClick={apply} disabled={busy} className="gradient-setter text-setter-foreground border-0">
-                {busy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null} Import
-              </Button>
-            </DialogFooter>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function normalizeJson(j: any): ParsedSection[] {
-  const normSection = (s: any): ParsedSection => ({
-    title: s.title || "Section",
-    description: s.description,
-    questions: (s.questions || []).map((q: any) => {
-      if (typeof q === "string") return { statement: q };
-      return { statement: String(q.statement ?? q.question ?? q.text ?? ""), weights: q.weights ?? q.scores };
-    }).filter((q: ParsedQuestion) => q.statement.trim().length > 0),
-  });
-  if (Array.isArray(j)) return j.map(normSection);
-  if (j.sections && Array.isArray(j.sections)) return j.sections.map(normSection);
-  if (Array.isArray(j.questions)) return [normSection(j)];
-  throw new Error("Unrecognised JSON shape.");
-}
+   

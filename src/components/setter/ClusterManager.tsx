@@ -22,6 +22,7 @@ export function ClusterManager({ clusters, onChange, questionnaireId }: {
   const [draft, setDraft] = useState({ name: "", emoji: "✨", description: "", possible: "" });
 
   useEffect(() => {
+    // Load template clusters (global ones that can be cloned)
     fetchAllClusters().then(setTemplates).catch(() => {});
   }, []);
 

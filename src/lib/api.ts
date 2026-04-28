@@ -3,7 +3,7 @@ import type { CareerCluster, FullQuestionnaire, SectionWithQuestions, QuestionWi
 
 export async function fetchClusters(questionnaireId?: string): Promise<CareerCluster[]> {
   let query = supabase.from("career_clusters").select("*");
-  
+
   if (questionnaireId) {
     // Fetch clusters specific to this questionnaire via the junction table
     const { data: qcData, error: qcError } = await supabase
@@ -13,17 +13,21 @@ export async function fetchClusters(questionnaireId?: string): Promise<CareerClu
     
     if (qcError) throw qcError;
     
+    console.log("Junction data for questionnaire", questionnaireId, ":", qcData);
+    
     if (qcData && qcData.length > 0) {
       const clusterIds = qcData.map(qc => qc.career_cluster_id);
       query = query.in("id", clusterIds);
     } else {
       // No clusters assigned yet, return empty array
+      console.log("No clusters found in junction table for questionnaire:", questionnaireId);
       return [];
     }
   }
-  
+
   const { data, error } = await query.order("name");
   if (error) throw error;
+  console.log("Fetched clusters:", data);
   return (data ?? []) as CareerCluster[];
 }
 
