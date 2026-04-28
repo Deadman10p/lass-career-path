@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Plus, FileText, Eye, BarChart3, Pencil, FileQuestion, CheckCircle2, Users, BookOpen, Sparkles } from "lucide-react";
+import { Plus, FileText, Eye, BarChart3, Pencil, FileQuestion, CheckCircle2, Users, BookOpen, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { createBlankQuestionnaire } from "@/lib/api";
 import type { Questionnaire } from "@/lib/types";
@@ -37,6 +37,18 @@ export default function SetterDashboard() {
       const id = await createBlankQuestionnaire(user.id);
       window.location.href = `/setter/questionnaire/${id}/edit`;
     } catch (e: any) { toast.error(e.message); }
+  };
+
+  const handleDelete = async (qId: string, title: string) => {
+    if (!confirm(`Are you sure you want to delete "${title}"? This will also delete all sections, questions, and responses.`)) return;
+    try {
+      const { error } = await supabase.from("questionnaires").delete().eq("id", qId);
+      if (error) throw error;
+      toast.success("Questionnaire deleted");
+      load();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete");
+    }
   };
 
   const published = list.filter((q) => q.is_published).length;
@@ -89,6 +101,7 @@ export default function SetterDashboard() {
                   <div className="flex shrink-0 gap-2">
                     <Button asChild variant="outline" size="sm"><Link to={`/setter/questionnaire/${q.id}/analytics`}><BarChart3 className="h-4 w-4 sm:mr-1.5" /><span className="hidden sm:inline">Analytics</span></Link></Button>
                     <Button asChild size="sm" className="gradient-setter text-setter-foreground border-0"><Link to={`/setter/questionnaire/${q.id}/edit`}><Pencil className="h-4 w-4 sm:mr-1.5" /><span className="hidden sm:inline">Edit</span></Link></Button>
+                    <Button variant="outline" size="icon" onClick={() => handleDelete(q.id, q.title)} title="Delete questionnaire"><Trash2 className="h-4 w-4 text-destructive" /></Button>
                   </div>
                 </li>
               ))}
