@@ -213,75 +213,134 @@ export default function QuestionnaireTake() {
     );
   }
 
-  // question stage
+  // question stage — full-screen immersive
   const selected = answers[current.q.id];
 
   return (
-    <PageShell tone="student" title="Student Portal">
-      <div className="mx-auto max-w-2xl">
-        {/* Progress */}
-        <div className="mb-4 flex items-center gap-3">
-          <Progress value={progress} className="h-2 flex-1" />
-          <span className="text-xs font-medium text-muted-foreground tabular-nums">{idx + 1} / {total}</span>
-        </div>
+    <div className="relative flex min-h-screen flex-col bg-gradient-to-b from-background via-student-soft/40 to-background overflow-hidden">
+      {/* Decorative animated backdrop */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute -top-40 -left-40 h-[480px] w-[480px] rounded-full bg-student/10 blur-3xl animate-float" />
+        <div className="absolute -bottom-40 -right-40 h-[520px] w-[520px] rounded-full bg-brand-red/10 blur-3xl animate-float" style={{ animationDelay: "1.2s" }} />
+      </div>
 
-        <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-elevated">
-          <div className="border-b border-border bg-secondary/40 px-5 py-3 text-xs uppercase tracking-widest text-muted-foreground">
+      {/* Top bar: progress + section + exit */}
+      <div className="sticky top-0 z-20 border-b border-border/60 bg-background/80 backdrop-blur-md">
+        <div className="mx-auto flex w-full max-w-5xl items-center gap-4 px-5 py-3 sm:px-8">
+          <button
+            onClick={() => navigate("/student/dashboard")}
+            className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+            aria-label="Exit questionnaire"
+          >
+            ← Exit
+          </button>
+          <div className="hidden text-[11px] font-semibold uppercase tracking-[0.18em] text-student sm:block">
             {current.sectionTitle}
           </div>
-          <div className="relative min-h-[280px] p-6 sm:p-8">
-            <AnimatePresence mode="wait" custom={direction}>
-              <motion.div
-                key={current.q.id}
-                custom={direction}
-                initial={{ opacity: 0, x: direction * 30 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: direction * -30 }}
-                transition={{ duration: 0.25 }}
-              >
-                <h2 className="font-display text-xl font-semibold leading-snug sm:text-2xl">
-                  {current.q.statement}
-                </h2>
-
-                <div className="mt-6 grid grid-cols-5 gap-1.5 sm:gap-2">
-                  {RATINGS.map((r) => {
-                    const isPicked = selected === r.value;
-                    return (
-                      <button
-                        key={r.value}
-                        onClick={() => handlePick(r.value)}
-                        aria-label={`${r.value} - ${r.label}`}
-                        className={cn(
-                          "flex flex-col items-center gap-1 rounded-2xl border-2 p-3 transition-all sm:p-4",
-                          isPicked ? `${r.tone} scale-105 shadow-glow` : "border-border bg-secondary/30 hover:scale-[1.03] hover:border-foreground/20"
-                        )}
-                      >
-                        <span className={cn("text-2xl font-bold sm:text-3xl", isPicked ? "text-white" : "text-foreground")}>{r.value}</span>
-                        <span className={cn("hidden text-center text-[10px] leading-tight sm:block", isPicked ? "text-white/90" : "text-muted-foreground")}>{r.label}</span>
-                        <span className={cn("text-center text-[10px] leading-tight sm:hidden", isPicked ? "text-white/90" : "text-muted-foreground")}>{r.short}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </motion.div>
-            </AnimatePresence>
-          </div>
-          <div className="flex items-center justify-between border-t border-border p-3">
-            <Button variant="ghost" size="sm" onClick={goPrev} disabled={idx === 0}>
-              <ArrowLeft className="mr-1 h-4 w-4" /> Back
-            </Button>
-            <span className="text-xs text-muted-foreground">{selected ? "Auto-advancing…" : "Pick an option"}</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={goNext}
-              disabled={!selected}
-            >
-              {idx === total - 1 ? "Submit" : "Next"} <ArrowRight className="ml-1 h-4 w-4" />
-            </Button>
+          <div className="flex flex-1 items-center gap-3">
+            <Progress value={progress} className="h-1.5 flex-1" />
+            <span className="text-xs font-medium tabular-nums text-muted-foreground">
+              {idx + 1} / {total}
+            </span>
           </div>
         </div>
       </div>
-    </PageShell>
+
+      {/* Question fills the screen */}
+      <div className="relative flex flex-1 items-center justify-center px-5 py-10 sm:px-8">
+        <AnimatePresence mode="wait" custom={direction}>
+          <motion.div
+            key={current.q.id}
+            custom={direction}
+            initial={{ opacity: 0, y: direction * 60, scale: 0.96, filter: "blur(8px)" }}
+            animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+            exit={{ opacity: 0, y: direction * -60, scale: 0.96, filter: "blur(8px)" }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="mx-auto flex w-full max-w-3xl flex-col items-center text-center"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.4 }}
+              className="mb-4 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-student sm:hidden"
+            >
+              {current.sectionTitle}
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05, duration: 0.45 }}
+              className="text-xs font-medium tabular-nums text-muted-foreground"
+            >
+              Question {idx + 1}
+            </motion.div>
+            <motion.h2
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.12, duration: 0.5 }}
+              className="mt-3 font-display text-3xl font-semibold leading-[1.15] tracking-tight text-foreground sm:text-4xl md:text-5xl"
+            >
+              {current.q.statement}
+            </motion.h2>
+
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.22, duration: 0.5 }}
+              className="mt-10 grid w-full max-w-2xl grid-cols-5 gap-2 sm:gap-3"
+            >
+              {RATINGS.map((r, i) => {
+                const isPicked = selected === r.value;
+                return (
+                  <motion.button
+                    key={r.value}
+                    onClick={() => handlePick(r.value)}
+                    aria-label={`${r.value} - ${r.label}`}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.28 + i * 0.05, duration: 0.35 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.96 }}
+                    className={cn(
+                      "flex aspect-square flex-col items-center justify-center gap-1 rounded-2xl border-2 p-3 transition-all sm:p-4",
+                      isPicked
+                        ? `${r.tone} scale-105 shadow-glow`
+                        : "border-border bg-card/80 backdrop-blur hover:border-foreground/30"
+                    )}
+                  >
+                    <span className={cn("text-2xl font-bold sm:text-3xl md:text-4xl", isPicked ? "text-white" : "text-foreground")}>
+                      {r.value}
+                    </span>
+                    <span className={cn("hidden text-center text-[10px] leading-tight sm:block", isPicked ? "text-white/90" : "text-muted-foreground")}>
+                      {r.label}
+                    </span>
+                    <span className={cn("text-center text-[10px] leading-tight sm:hidden", isPicked ? "text-white/90" : "text-muted-foreground")}>
+                      {r.short}
+                    </span>
+                  </motion.button>
+                );
+              })}
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.45, duration: 0.4 }}
+              className="mt-6 flex w-full max-w-2xl items-center justify-between"
+            >
+              <Button variant="ghost" size="sm" onClick={goPrev} disabled={idx === 0}>
+                <ArrowLeft className="mr-1 h-4 w-4" /> Back
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                {selected ? "Auto-advancing…" : "Pick an option"}
+              </span>
+              <Button variant="ghost" size="sm" onClick={goNext} disabled={!selected}>
+                {idx === total - 1 ? "Submit" : "Next"} <ArrowRight className="ml-1 h-4 w-4" />
+              </Button>
+            </motion.div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </div>
   );
 }
