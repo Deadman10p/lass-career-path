@@ -32,10 +32,10 @@ export function Reveal({
     opacity: inView ? 1 : 0,
     willChange: "opacity, transform",
   };
-  // @ts-expect-error - dynamic tag typing
+  const Comp = Tag as any;
   return (
-    <Tag ref={ref as any} style={style} className={cn(className)}>
+    <Comp ref={ref} style={style} className={cn(className)}>
       {children}
-    </Tag>
+    </Comp>
   );
 }
