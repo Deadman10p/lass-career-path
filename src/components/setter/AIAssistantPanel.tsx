@@ -146,10 +146,24 @@ export function AIAssistantPanel({ open, onOpenChange, doc, clusters, onApplied 
   const apply = async (proposal: Proposal, idx: number) => {
     setApplying(true);
     try {
+      let applied = 0;
+      const skipped: string[] = [];
       for (const a of proposal.actions) {
-        await applyAction(a, doc, clusters);
+        const res = await applyAction(a, doc, clusters);
+        if (res.ok) applied++;
+        else skipped.push(`${a.type}: ${res.reason}`);
       }
-      toast.success("Changes applied!");
+      if (applied === 0) {
+        toast.error(`Nothing was applied. ${skipped[0] ?? ""}`);
+        console.warn("AI apply skipped all actions:", skipped);
+        return;
+      }
+      if (skipped.length) {
+        toast.warning(`Applied ${applied}/${proposal.actions.length}. Skipped: ${skipped.length}`);
+        console.warn("AI apply partial skips:", skipped);
+      } else {
+        toast.success("Changes applied!");
+      }
       // Mark proposal as applied AND inject a system note so the AI's next turn knows the doc just changed.
       const note = `[system] Applied changes: ${proposal.summary}. The questionnaire snapshot has been refreshed; use the latest IDs/weights from now on.`;
       setMsgs((m) => {
