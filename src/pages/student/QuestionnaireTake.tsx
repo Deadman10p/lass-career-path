@@ -186,18 +186,64 @@ export default function QuestionnaireTake() {
   if (stage === "section-transition" && pendingTransitionFrom !== null) {
     const next = flat[pendingTransitionFrom + 1];
     return (
-      <PageShell tone="student" title="Student Portal">
-        <motion.div initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.45 }}>
-          <div className="mx-auto max-w-xl rounded-3xl border border-border bg-card p-8 text-center shadow-elevated sm:p-12">
-            <div className="text-xs uppercase tracking-widest text-student">Up next</div>
-            <h2 className="mt-3 font-display text-3xl font-semibold">{next.sectionTitle}</h2>
-            {next.sectionDesc && <p className="mt-2 text-sm text-muted-foreground">{next.sectionDesc}</p>}
-            <Button onClick={continueAfterTransition} size="lg" className="mt-6 gradient-student text-student-foreground border-0 shadow-glow">
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background">
+        {/* Sweeping curtain reveal */}
+        <motion.div
+          aria-hidden
+          initial={{ scaleY: 1 }}
+          animate={{ scaleY: 0 }}
+          transition={{ duration: 0.9, ease: [0.83, 0, 0.17, 1], delay: 0.05 }}
+          style={{ transformOrigin: "top" }}
+          className="absolute inset-0 z-10 gradient-student"
+        />
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-32 left-1/2 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-student/15 blur-3xl animate-float" />
+          <div className="absolute bottom-0 right-0 h-[360px] w-[360px] rounded-full bg-brand-red/10 blur-3xl animate-float" style={{ animationDelay: "1s" }} />
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="relative z-20 mx-auto max-w-xl px-6 text-center"
+        >
+          <motion.div
+            initial={{ opacity: 0, letterSpacing: "0.4em" }}
+            animate={{ opacity: 1, letterSpacing: "0.22em" }}
+            transition={{ duration: 0.7, delay: 0.7 }}
+            className="text-[11px] font-semibold uppercase text-student"
+          >
+            Section {flat[pendingTransitionFrom + 1].sectionIndex + 1} · Up next
+          </motion.div>
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.85 }}
+            className="mt-4 font-display text-4xl font-semibold tracking-tight sm:text-5xl"
+          >
+            {next.sectionTitle}
+          </motion.h2>
+          {next.sectionDesc && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 1.0 }}
+              className="mx-auto mt-3 max-w-md text-sm text-muted-foreground sm:text-base"
+            >
+              {next.sectionDesc}
+            </motion.p>
+          )}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 1.15 }}
+          >
+            <Button onClick={continueAfterTransition} size="lg" className="mt-7 gradient-student text-student-foreground border-0 shadow-glow">
               Continue <ArrowRight className="ml-1.5 h-4 w-4" />
             </Button>
-          </div>
+          </motion.div>
         </motion.div>
-      </PageShell>
+      </div>
     );
   }
 
