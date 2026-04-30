@@ -219,7 +219,7 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
               if (!cid) continue;
               // Handle both simple number weights and detailed object format
               let num: number;
-              if (typeof val === 'object' && val !== null && 'value' in val) {
+              if (val !== null && typeof val === 'object' && 'value' in (val as any)) {
                 num = Number((val as any).value);
               } else {
                 num = Number(val);

@@ -24,12 +24,26 @@ Deno.serve(async (req) => {
     const { data: existing } = await admin.auth.admin.listUsers();
     const found = existing?.users?.find((u) => u.email?.toLowerCase() === COUNSELLOR_EMAIL);
 
+    const ensureProfile = async (uid: string) => {
+      // Check if a profile row exists; if not, insert one with the setter role.
+      const { data: existingProfile } = await admin
+        .from("profiles")
+        .select("id, role")
+        .eq("user_id", uid)
+        .maybeSingle();
+      if (!existingProfile) {
+        await admin.from("profiles").insert({
+          user_id: uid,
+          role: "setter",
+          full_name: "School Counsellor",
+        });
+      } else if (existingProfile.role !== "setter") {
+        await admin.from("profiles").update({ role: "setter" }).eq("user_id", uid);
+      }
+    };
+
     if (found) {
-      // Make sure profile exists with setter role
-      await admin.from("profiles").upsert(
-        { user_id: found.id, role: "setter", full_name: "School Counsellor" },
-        { onConflict: "user_id" }
-      );
+      await ensureProfile(found.id);
       return new Response(JSON.stringify({ ok: true, created: false, user_id: found.id }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -43,12 +57,10 @@ Deno.serve(async (req) => {
     });
     if (error) throw error;
 
-    // Ensure profile is set with setter role (the trigger normally handles it)
+    // Ensure profile is set with setter role (the trigger normally handles it,
+    // but we re-check here so this function always returns with a usable setter).
     if (data.user) {
-      await admin.from("profiles").upsert(
-        { user_id: data.user.id, role: "setter", full_name: "School Counsellor" },
-        { onConflict: "user_id" }
-      );
+      await ensureProfile(data.user.id);
     }
 
     return new Response(JSON.stringify({ ok: true, created: true, user_id: data.user?.id }), {

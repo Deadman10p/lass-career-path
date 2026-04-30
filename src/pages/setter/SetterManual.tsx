@@ -186,6 +186,17 @@ export default function SetterManual() {
         <Section icon={<BarChart3 className="h-5 w-5" />} title="11. Per-questionnaire analytics">
           Open <strong>Analytics</strong> on any questionnaire for total responses, average score per category (bar chart), most common top category, and the response table. Use <em>Export CSV</em> for a spreadsheet (one row per student, one column per category).
         </Section>
+
+        <Section icon={<Users className="h-5 w-5" />} title="12. Production checklist & troubleshooting">
+          <ul className="list-disc pl-5 text-sm space-y-1">
+            <li><strong>Only one setter:</strong> sign-up is students-only. The counsellor account (<code>counsellor@lightacademy.ac.ug</code>) is the sole setter — created automatically the first time the app boots.</li>
+            <li><strong>Students self-register</strong> with full name, class and stream. These are used for filtering in Results.</li>
+            <li><strong>Email confirmation:</strong> for fastest classroom rollout, keep email auto-confirm <em>on</em> for students; turn off later if you want stricter verification.</li>
+            <li><strong>“new row violates row-level security”</strong> when creating a questionnaire → it means your account doesn't yet have the <em>setter</em> profile row. Sign out, sign back in as the counsellor, and try again. (The app heals this on first counsellor login.)</li>
+            <li><strong>Backups:</strong> use <em>Export CSV</em> from each questionnaire's Analytics page at the end of every term.</li>
+            <li><strong>Resetting a questionnaire:</strong> deleting it from the dashboard removes its sections, questions, weights, categories and student responses for that questionnaire only — all other questionnaires stay intact.</li>
+          </ul>
+        </Section>
       </div>
     </PageShell>
   );
