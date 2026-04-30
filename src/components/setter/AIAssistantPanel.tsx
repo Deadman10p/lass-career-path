@@ -292,38 +292,145 @@ function describeAction(a: ProposalAction): string {
   }
 }
 
-async function applyAction(a: ProposalAction, doc: FullQuestionnaire, clusters: CareerCluster[]) {
-  const findSectionId = (title?: string, id?: string) => id ?? doc.sections.find(s => s.title.toLowerCase() === (title ?? "").toLowerCase())?.id;
-  const findClusterId = (name?: string) => clusters.find(c => c.name.toLowerCase() === (name ?? "").toLowerCase())?.id;
-
-  if (a.type === "add_section") {
-    const order = doc.sections.length;
-    await supabase.from("sections").insert({
-      questionnaire_id: doc.id, title: a.new_section_title || "New Section", description: a.new_section_description || "", order_index: order,
-    });
-  } else if (a.type === "edit_section") {
-    const sid = findSectionId(a.section_title, a.section_id);
-    if (sid) await supabase.from("sections").update({ title: a.new_section_title, description: a.new_section_description }).eq("id", sid);
-  } else if (a.type === "delete_section") {
-    const sid = findSectionId(a.section_title, a.section_id);
-    if (sid) await supabase.from("sections").delete().eq("id", sid);
-  } else if (a.type === "add_question") {
-    const sid = findSectionId(a.section_title, a.section_id);
-    if (!sid) return;
-    const sec = doc.sections.find(s => s.id === sid);
-    const order = sec?.questions.length ?? 0;
-    await supabase.from("questions").insert({ section_id: sid, statement: a.question_statement || "", order_index: order });
-  } else if (a.type === "edit_question") {
-    if (a.question_id) await supabase.from("questions").update({ statement: a.new_statement }).eq("id", a.question_id);
-  } else if (a.type === "delete_question") {
-    if (a.question_id) await supabase.from("questions").delete().eq("id", a.question_id);
-  } else if (a.type === "set_weight") {
-    const cid = findClusterId(a.cluster_name);
-    if (a.question_id && cid && typeof a.weight === "number") {
-      await supabase.from("answer_weights").upsert(
-        { question_id: a.question_id, career_cluster_id: cid, weight: Math.max(0, Math.min(5, a.weight)) },
-        { onConflict: "question_id,career_cluster_id" }
-      );
+async function applyAction(
+  a: ProposalAction,
+  doc: FullQuestionnaire,
+  clusters: CareerCluster[],
+): Promise<{ ok: boolean; reason?: string }> {
+  const norm = (s?: string) => (s ?? "").trim().toLowerCase();
+  const findSection = (title?: string, id?: string) => {
+    if (id) {
+      const byId = doc.sections.find(s => s.id === id);
+      if (byId) return byId;
     }
+    const t = norm(title);
+    if (!t) return undefined;
+    return (
+      doc.sections.find(s => norm(s.title) === t) ??
+      doc.sections.find(s => norm(s.title).includes(t) || t.includes(norm(s.title)))
+    );
+  };
+  const findQuestion = (id?: string, statement?: string) => {
+    if (id) {
+      for (const s of doc.sections) {
+        const q = s.questions.find(q => q.id === id);
+        if (q) return q;
+      }
+    }
+    const t = norm(statement);
+    if (!t) return undefined;
+    for (const s of doc.sections) {
+      const q = s.questions.find(q => norm(q.statement) === t);
+      if (q) return q;
+    }
+    for (const s of doc.sections) {
+      const q = s.questions.find(q => norm(q.statement).includes(t) || t.includes(norm(q.statement)));
+      if (q) return q;
+    }
+    return undefined;
+  };
+  const findClusterId = (name?: string) => {
+    const t = norm(name);
+    if (!t) return undefined;
+    return (
+      clusters.find(c => norm(c.name) === t)?.id ??
+      clusters.find(c => norm(c.name).includes(t) || t.includes(norm(c.name)))?.id
+    );
+  };
+
+  try {
+    if (a.type === "add_section") {
+      const order = doc.sections.length;
+      const { error } = await supabase.from("sections").insert({
+        questionnaire_id: doc.id,
+        title: a.new_section_title || "New Section",
+        description: a.new_section_description || "",
+        order_index: order,
+      });
+      if (error) return { ok: false, reason: error.message };
+      return { ok: true };
+    }
+
+    if (a.type === "edit_section") {
+      const sec = findSection(a.section_title, a.section_id);
+      if (!sec) return { ok: false, reason: `section not found (${a.section_title ?? a.section_id})` };
+      const patch: Record<string, unknown> = {};
+      if (a.new_section_title) patch.title = a.new_section_title;
+      if (a.new_section_description !== undefined) patch.description = a.new_section_description;
+      if (!Object.keys(patch).length) return { ok: false, reason: "no changes provided" };
+      const { error } = await supabase.from("sections").update(patch).eq("id", sec.id);
+      if (error) return { ok: false, reason: error.message };
+      return { ok: true };
+    }
+
+    if (a.type === "delete_section") {
+      const sec = findSection(a.section_title, a.section_id);
+      if (!sec) return { ok: false, reason: `section not found` };
+      const { error } = await supabase.from("sections").delete().eq("id", sec.id);
+      if (error) return { ok: false, reason: error.message };
+      return { ok: true };
+    }
+
+    if (a.type === "add_question") {
+      let sec = findSection(a.section_title, a.section_id);
+      // Fallback: if no section specified or matched, use the first section (or create one)
+      if (!sec) {
+        if (doc.sections.length > 0) {
+          sec = doc.sections[0];
+        } else {
+          const { data: created, error: secErr } = await supabase
+            .from("sections")
+            .insert({ questionnaire_id: doc.id, title: a.section_title || "Section 1", description: "", order_index: 0 })
+            .select()
+            .single();
+          if (secErr || !created) return { ok: false, reason: secErr?.message || "could not create section" };
+          sec = { ...created, questions: [] } as any;
+        }
+      }
+      const order = sec!.questions?.length ?? 0;
+      const { error } = await supabase.from("questions").insert({
+        section_id: sec!.id,
+        statement: a.question_statement || a.new_statement || "",
+        order_index: order,
+      });
+      if (error) return { ok: false, reason: error.message };
+      return { ok: true };
+    }
+
+    if (a.type === "edit_question") {
+      const q = findQuestion(a.question_id, a.question_statement);
+      if (!q) return { ok: false, reason: `question not found` };
+      if (!a.new_statement) return { ok: false, reason: "no new statement" };
+      const { error } = await supabase.from("questions").update({ statement: a.new_statement }).eq("id", q.id);
+      if (error) return { ok: false, reason: error.message };
+      return { ok: true };
+    }
+
+    if (a.type === "delete_question") {
+      const q = findQuestion(a.question_id, a.question_statement);
+      if (!q) return { ok: false, reason: `question not found` };
+      const { error } = await supabase.from("questions").delete().eq("id", q.id);
+      if (error) return { ok: false, reason: error.message };
+      return { ok: true };
+    }
+
+    if (a.type === "set_weight") {
+      const q = findQuestion(a.question_id, a.question_statement);
+      const cid = findClusterId(a.cluster_name);
+      if (!q) return { ok: false, reason: "question not found" };
+      if (!cid) return { ok: false, reason: `cluster "${a.cluster_name}" not found` };
+      if (typeof a.weight !== "number") return { ok: false, reason: "weight missing" };
+      const { error } = await supabase.from("answer_weights").upsert(
+        { question_id: q.id, career_cluster_id: cid, weight: Math.max(0, Math.min(5, Math.round(a.weight))) },
+        { onConflict: "question_id,career_cluster_id" },
+      );
+      if (error) return { ok: false, reason: error.message };
+      return { ok: true };
+    }
+
+    return { ok: false, reason: `unknown action ${(a as any).type}` };
+  } catch (e: any) {
+    return { ok: false, reason: e?.message || "exception" };
   }
 }
+
