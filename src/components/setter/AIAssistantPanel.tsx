@@ -354,7 +354,7 @@ async function applyAction(
     if (a.type === "edit_section") {
       const sec = findSection(a.section_title, a.section_id);
       if (!sec) return { ok: false, reason: `section not found (${a.section_title ?? a.section_id})` };
-      const patch: Record<string, unknown> = {};
+      const patch: { title?: string; description?: string } = {};
       if (a.new_section_title) patch.title = a.new_section_title;
       if (a.new_section_description !== undefined) patch.description = a.new_section_description;
       if (!Object.keys(patch).length) return { ok: false, reason: "no changes provided" };
