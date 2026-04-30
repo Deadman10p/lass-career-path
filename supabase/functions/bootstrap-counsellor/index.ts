@@ -57,12 +57,10 @@ Deno.serve(async (req) => {
     });
     if (error) throw error;
 
-    // Ensure profile is set with setter role (the trigger normally handles it)
+    // Ensure profile is set with setter role (the trigger normally handles it,
+    // but we re-check here so this function always returns with a usable setter).
     if (data.user) {
-      await admin.from("profiles").upsert(
-        { user_id: data.user.id, role: "setter", full_name: "School Counsellor" },
-        { onConflict: "user_id" }
-      );
+      await ensureProfile(data.user.id);
     }
 
     return new Response(JSON.stringify({ ok: true, created: true, user_id: data.user?.id }), {
