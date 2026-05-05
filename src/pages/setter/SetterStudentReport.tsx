@@ -185,6 +185,10 @@ export default function SetterStudentReport() {
           );
         })}
 
+        <div className="rounded-2xl border border-border bg-card shadow-card">
+          <div className="border-b border-border p-5">
+            <h3 className="font-display text-lg font-semibold">All categories ranked</h3>
+          </div>
           <Accordion type="single" collapsible className="px-2 pb-2">
             {ranked.map((r, i) => (
               <AccordionItem key={r.cluster.id} value={r.cluster.id} className="border-border">
