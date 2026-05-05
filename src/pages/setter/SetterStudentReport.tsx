@@ -150,10 +150,41 @@ export default function SetterStudentReport() {
           ))}
         </div>
 
-        <div className="rounded-2xl border border-border bg-card shadow-card">
-          <div className="border-b border-border p-5">
-            <h3 className="font-display text-lg font-semibold">All categories ranked</h3>
+        {insight?.overview && (
+          <div className="rounded-2xl border border-setter/30 bg-setter/5 p-5 shadow-card">
+            <div className="mb-1 text-xs font-medium uppercase tracking-widest text-setter">AI synthesis</div>
+            <p className="text-sm leading-relaxed">{insight.overview}</p>
           </div>
+        )}
+
+        {/* Adaptive profile-attribute cards per top clusters */}
+        {ranked.slice(0, 3).map(r => {
+          const aiAttrs = (insight?.by_cluster?.[r.cluster.id] ?? {}) as Record<string, string>;
+          const baseAttrs = (r.cluster.profile_attributes ?? {}) as Record<string, string>;
+          const merged: Record<string, string> = { ...baseAttrs, ...aiAttrs };
+          const keys = Object.keys(merged).filter(k => merged[k]);
+          if (!keys.length) return null;
+          return (
+            <div key={r.cluster.id} className="rounded-2xl border border-border bg-card p-5 shadow-card">
+              <div className="mb-3 flex items-center gap-2">
+                <span className="text-2xl">{r.cluster.icon_emoji}</span>
+                <div>
+                  <div className="font-display font-semibold">{r.cluster.name}</div>
+                  <div className="text-xs text-muted-foreground">Profile attributes</div>
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {keys.map(k => (
+                  <div key={k} className="rounded-xl border border-border bg-secondary/30 p-4">
+                    <div className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{k}</div>
+                    <p className="mt-1.5 text-sm">{merged[k]}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+
           <Accordion type="single" collapsible className="px-2 pb-2">
             {ranked.map((r, i) => (
               <AccordionItem key={r.cluster.id} value={r.cluster.id} className="border-border">
