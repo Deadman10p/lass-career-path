@@ -34,13 +34,15 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
   const [jsonText, setJsonText] = useState("");
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState<ParsedSection[] | null>(null);
+  const [parsedClusters, setParsedClusters] = useState<ClusterInfo[]>([]);
+  const [profileSchema, setProfileSchema] = useState<string[]>([]);
   const [clusters, setClusters] = useState<CareerCluster[]>([]);
   const [applyWeights, setApplyWeights] = useState(true);
   const [detectedClusters, setDetectedClusters] = useState<Map<string, ClusterInfo>>(new Map());
 
   useEffect(() => { if (open) fetchClusters(questionnaireId).then(setClusters).catch(() => {}); }, [open, questionnaireId]);
 
-  const reset = () => { setFile(null); setJsonText(""); setPreview(null); setApplyWeights(true); setDetectedClusters(new Map()); };
+  const reset = () => { setFile(null); setJsonText(""); setPreview(null); setParsedClusters([]); setProfileSchema([]); setApplyWeights(true); setDetectedClusters(new Map()); };
 
   // Build cluster name → id map (case-insensitive)
   const clusterIdByName = useMemo(() => {
