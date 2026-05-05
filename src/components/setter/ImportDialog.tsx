@@ -96,19 +96,17 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
   const parse = async () => {
     setBusy(true);
     try {
-      let result: ParsedSection[] = [];
+      let parsed: ParsedDoc = { sections: [], clusters: [], profile_schema: [] };
       if (mode === "json") {
-        const j = JSON.parse(jsonText);
-        result = normalizeJson(j);
+        parsed = normalizeJson(JSON.parse(jsonText));
       } else {
         if (!file) throw new Error("Choose a file");
         const ext = file.name.split(".").pop()?.toLowerCase();
         if (ext === "json") {
           const txt = await file.text();
-          result = normalizeJson(JSON.parse(txt));
+          parsed = normalizeJson(JSON.parse(txt));
         } else if (["pdf", "docx", "xlsx", "xls"].includes(ext || "")) {
           const buf = await file.arrayBuffer();
-          // Chunked base64 to avoid call-stack overflow on large files
           let binary = "";
           const bytes = new Uint8Array(buf);
           const CHUNK = 0x8000;
@@ -120,13 +118,15 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
             body: { filename: file.name, mime: file.type, base64 },
           });
           if (error) throw error;
-          result = data.sections as ParsedSection[];
+          parsed = { sections: data.sections as ParsedSection[], clusters: [], profile_schema: [] };
         } else {
           throw new Error("Unsupported file type. Use JSON, PDF, DOCX, or XLSX.");
         }
       }
-      if (!result.length) throw new Error("No questions found.");
-      setPreview(result);
+      if (!parsed.sections.length) throw new Error("No questions found.");
+      setPreview(parsed.sections);
+      setParsedClusters(parsed.clusters);
+      setProfileSchema(parsed.profile_schema);
     } catch (e: any) {
       toast.error(e.message || "Failed to parse");
     } finally {
