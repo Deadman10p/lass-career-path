@@ -156,15 +156,16 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
           console.log("Processing cluster:", name, "normalized:", normalizedName);
           
           if (!effectiveMap.has(normalizedName)) {
-            // Get cluster info from detectedClusters map
-            const clusterInfo = detectedClusters.get(name) ?? { name, icon_emoji: '✨', description: '', possible_careers: [] };
-            console.log("Creating new cluster:", name, "with info:", clusterInfo);
-            
+            // Prefer rich cluster info from top-level "clusters" array if present
+            const topLevel = parsedClusters.find(pc => pc.name.trim().toLowerCase() === normalizedName);
+            const clusterInfo = topLevel ?? detectedClusters.get(name) ?? { name, icon_emoji: '✨', description: '', possible_careers: [] };
+
             const { data, error } = await supabase.from("career_clusters").insert({
               name,
               icon_emoji: clusterInfo.icon_emoji ?? '✨',
               description: clusterInfo.description ?? `Auto-created from import`,
               possible_careers: clusterInfo.possible_careers ?? [],
+              profile_attributes: clusterInfo.profile_attributes ?? {},
               color_hex: colors[colorIndex++ % colors.length],
               questionnaire_id: questionnaireId,
             } as any).select().single();
@@ -207,6 +208,21 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
         }
         
         console.log("Final effectiveMap after auto-creation:", Array.from(effectiveMap.entries()));
+      }
+
+      // Persist profile_schema on the questionnaire if provided
+      if (profileSchema.length) {
+        await supabase.from("questionnaires").update({ profile_schema: profileSchema } as any).eq("id", questionnaireId);
+      }
+
+      // For existing clusters that match an entry in parsedClusters, merge profile_attributes
+      for (const pc of parsedClusters) {
+        const existingId = effectiveMap.get(pc.name.trim().toLowerCase());
+        if (existingId && pc.profile_attributes && Object.keys(pc.profile_attributes).length) {
+          await supabase.from("career_clusters")
+            .update({ profile_attributes: pc.profile_attributes } as any)
+            .eq("id", existingId);
+        }
       }
 
       const { data: existing } = await supabase.from("sections").select("order_index").eq("questionnaire_id", questionnaireId).order("order_index", { ascending: false }).limit(1);
