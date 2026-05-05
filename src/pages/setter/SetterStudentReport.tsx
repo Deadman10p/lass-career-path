@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { ArrowLeft, Trophy, User as UserIcon, Calendar, ClipboardList } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchClusters, fetchFullQuestionnaire } from "@/lib/api";
+import { fetchClusters, fetchFullQuestionnaire, fetchActiveClusterIdsForQuestionnaire } from "@/lib/api";
 import { generateInsights } from "@/lib/scoring";
 import type { CareerCluster, FullQuestionnaire } from "@/lib/types";
 import {
@@ -29,6 +29,8 @@ export default function SetterStudentReport() {
   const [doc, setDoc] = useState<FullQuestionnaire | null>(null);
   const [student, setStudent] = useState<{ full_name: string; class_name: string | null; stream: string | null } | null>(null);
   const [submittedAt, setSubmittedAt] = useState<string>("");
+  const [activeIds, setActiveIds] = useState<Set<string>>(new Set());
+  const [insight, setInsight] = useState<any>(null);
 
   useEffect(() => {
     (async () => {
@@ -37,31 +39,37 @@ export default function SetterStudentReport() {
       if (!resp) { setLoading(false); return; }
       setSubmittedAt(resp.submitted_at);
 
-      const [d, cs, { data: rs }, { data: ans }, { data: prof }] = await Promise.all([
+      const [d, cs, { data: rs }, { data: ans }, { data: prof }, activeSet, { data: ins }] = await Promise.all([
         fetchFullQuestionnaire(resp.questionnaire_id),
         fetchClusters(resp.questionnaire_id),
         supabase.from("results").select("*").eq("response_id", responseId),
         supabase.from("answers").select("*").eq("response_id", responseId),
         supabase.from("profiles").select("full_name, class_name, stream").eq("user_id", resp.student_id).maybeSingle(),
+        fetchActiveClusterIdsForQuestionnaire(resp.questionnaire_id),
+        supabase.from("response_insights").select("*").eq("response_id", responseId).maybeSingle(),
       ]);
       setDoc(d);
       setClusters(cs);
       setResults((rs ?? []) as ResultRow[]);
       setAnswers((ans ?? []) as AnswerRow[]);
       setStudent(prof as any);
+      setActiveIds(activeSet);
+      setInsight(ins?.summary ?? null);
       setLoading(false);
     })();
   }, [responseId]);
 
   const ranked = useMemo(() => {
     if (!clusters.length) return [];
-    const arr = clusters.map(c => {
-      const r = results.find(x => x.career_cluster_id === c.id);
-      return { cluster: c, total: r?.total_score ?? 0, max: 0, percent: 0 };
-    }).sort((a, b) => b.total - a.total);
+    const arr = clusters
+      .filter(c => activeIds.has(c.id) || (results.find(x => x.career_cluster_id === c.id)?.total_score ?? 0) > 0)
+      .map(c => {
+        const r = results.find(x => x.career_cluster_id === c.id);
+        return { cluster: c, total: r?.total_score ?? 0, max: 0, percent: 0 };
+      }).sort((a, b) => b.total - a.total);
     const maxTotal = Math.max(...arr.map(r => r.total), 1);
     return arr.map(r => ({ ...r, percent: Math.round((r.total / maxTotal) * 100) }));
-  }, [clusters, results]);
+  }, [clusters, results, activeIds]);
 
   const ratingByQ = useMemo(() => {
     const m = new Map<string, number>();
@@ -141,6 +149,41 @@ export default function SetterStudentReport() {
             </div>
           ))}
         </div>
+
+        {insight?.overview && (
+          <div className="rounded-2xl border border-setter/30 bg-setter/5 p-5 shadow-card">
+            <div className="mb-1 text-xs font-medium uppercase tracking-widest text-setter">AI synthesis</div>
+            <p className="text-sm leading-relaxed">{insight.overview}</p>
+          </div>
+        )}
+
+        {/* Adaptive profile-attribute cards per top clusters */}
+        {ranked.slice(0, 3).map(r => {
+          const aiAttrs = (insight?.by_cluster?.[r.cluster.id] ?? {}) as Record<string, string>;
+          const baseAttrs = (r.cluster.profile_attributes ?? {}) as Record<string, string>;
+          const merged: Record<string, string> = { ...baseAttrs, ...aiAttrs };
+          const keys = Object.keys(merged).filter(k => merged[k]);
+          if (!keys.length) return null;
+          return (
+            <div key={r.cluster.id} className="rounded-2xl border border-border bg-card p-5 shadow-card">
+              <div className="mb-3 flex items-center gap-2">
+                <span className="text-2xl">{r.cluster.icon_emoji}</span>
+                <div>
+                  <div className="font-display font-semibold">{r.cluster.name}</div>
+                  <div className="text-xs text-muted-foreground">Profile attributes</div>
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {keys.map(k => (
+                  <div key={k} className="rounded-xl border border-border bg-secondary/30 p-4">
+                    <div className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{k}</div>
+                    <p className="mt-1.5 text-sm">{merged[k]}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
 
         <div className="rounded-2xl border border-border bg-card shadow-card">
           <div className="border-b border-border p-5">

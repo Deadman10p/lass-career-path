@@ -5,42 +5,58 @@ export async function fetchClusters(questionnaireId?: string): Promise<CareerClu
   let query = supabase.from("career_clusters").select("*");
 
   if (questionnaireId) {
-    // Fetch clusters specific to this questionnaire via the junction table
     const { data: qcData, error: qcError } = await supabase
       .from("questionnaire_clusters")
       .select("career_cluster_id")
       .eq("questionnaire_id", questionnaireId);
-    
+
     if (qcError) throw qcError;
-    
-    console.log("Junction data for questionnaire", questionnaireId, ":", qcData);
-    
+
     if (qcData && qcData.length > 0) {
       const clusterIds = qcData.map(qc => qc.career_cluster_id);
       query = query.in("id", clusterIds);
     } else {
-      // No clusters assigned yet, return empty array
-      console.log("No clusters found in junction table for questionnaire:", questionnaireId);
       return [];
     }
   }
 
   const { data, error } = await query.order("name");
   if (error) throw error;
-  console.log("Fetched clusters:", data);
-  return (data ?? []) as CareerCluster[];
+  return (data ?? []) as unknown as CareerCluster[];
 }
 
 export async function fetchAllClusters(): Promise<CareerCluster[]> {
-  // Templates: only global (questionnaire_id IS NULL) clusters appear in the
-  // shared pool. Questionnaire-scoped clusters are private to their owner.
   const { data, error } = await supabase
     .from("career_clusters")
     .select("*")
     .is("questionnaire_id", null)
     .order("name");
   if (error) throw error;
-  return (data ?? []) as CareerCluster[];
+  return (data ?? []) as unknown as CareerCluster[];
+}
+
+/**
+ * Returns the set of cluster ids that actually have a non-zero weight on at
+ * least one question of the given questionnaire. Used to hide "ghost"
+ * categories (clusters that exist on the questionnaire but were never wired up
+ * to any question) from results / charts.
+ */
+export async function fetchActiveClusterIdsForQuestionnaire(
+  questionnaireId: string,
+): Promise<Set<string>> {
+  const { data: secs } = await supabase
+    .from("sections").select("id").eq("questionnaire_id", questionnaireId);
+  const sIds = (secs ?? []).map((s: any) => s.id);
+  if (!sIds.length) return new Set();
+  const { data: qs } = await supabase.from("questions").select("id").in("section_id", sIds);
+  const qIds = (qs ?? []).map((x: any) => x.id);
+  if (!qIds.length) return new Set();
+  const { data: ws } = await supabase
+    .from("answer_weights")
+    .select("career_cluster_id, weight")
+    .in("question_id", qIds)
+    .gt("weight", 0);
+  return new Set((ws ?? []).map((w: any) => w.career_cluster_id));
 }
 
 export async function fetchFullQuestionnaire(id: string): Promise<FullQuestionnaire | null> {

@@ -13,7 +13,18 @@ import type { CareerCluster } from "@/lib/types";
 
 interface ParsedQuestion { statement: string; weights?: Record<string, number> }
 interface ParsedSection { title: string; description?: string; questions: ParsedQuestion[] }
-interface ClusterInfo { name: string; icon_emoji?: string; description?: string; possible_careers?: string[] }
+interface ClusterInfo {
+  name: string;
+  icon_emoji?: string;
+  description?: string;
+  possible_careers?: string[];
+  profile_attributes?: Record<string, string>;
+}
+interface ParsedDoc {
+  sections: ParsedSection[];
+  clusters: ClusterInfo[];
+  profile_schema: string[];
+}
 
 export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }: {
   open: boolean; onOpenChange: (v: boolean) => void; questionnaireId: string; onImported: () => void;
@@ -23,13 +34,15 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
   const [jsonText, setJsonText] = useState("");
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState<ParsedSection[] | null>(null);
+  const [parsedClusters, setParsedClusters] = useState<ClusterInfo[]>([]);
+  const [profileSchema, setProfileSchema] = useState<string[]>([]);
   const [clusters, setClusters] = useState<CareerCluster[]>([]);
   const [applyWeights, setApplyWeights] = useState(true);
   const [detectedClusters, setDetectedClusters] = useState<Map<string, ClusterInfo>>(new Map());
 
   useEffect(() => { if (open) fetchClusters(questionnaireId).then(setClusters).catch(() => {}); }, [open, questionnaireId]);
 
-  const reset = () => { setFile(null); setJsonText(""); setPreview(null); setApplyWeights(true); setDetectedClusters(new Map()); };
+  const reset = () => { setFile(null); setJsonText(""); setPreview(null); setParsedClusters([]); setProfileSchema([]); setApplyWeights(true); setDetectedClusters(new Map()); };
 
   // Build cluster name → id map (case-insensitive)
   const clusterIdByName = useMemo(() => {
@@ -83,19 +96,17 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
   const parse = async () => {
     setBusy(true);
     try {
-      let result: ParsedSection[] = [];
+      let parsed: ParsedDoc = { sections: [], clusters: [], profile_schema: [] };
       if (mode === "json") {
-        const j = JSON.parse(jsonText);
-        result = normalizeJson(j);
+        parsed = normalizeJson(JSON.parse(jsonText));
       } else {
         if (!file) throw new Error("Choose a file");
         const ext = file.name.split(".").pop()?.toLowerCase();
         if (ext === "json") {
           const txt = await file.text();
-          result = normalizeJson(JSON.parse(txt));
+          parsed = normalizeJson(JSON.parse(txt));
         } else if (["pdf", "docx", "xlsx", "xls"].includes(ext || "")) {
           const buf = await file.arrayBuffer();
-          // Chunked base64 to avoid call-stack overflow on large files
           let binary = "";
           const bytes = new Uint8Array(buf);
           const CHUNK = 0x8000;
@@ -107,13 +118,15 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
             body: { filename: file.name, mime: file.type, base64 },
           });
           if (error) throw error;
-          result = data.sections as ParsedSection[];
+          parsed = { sections: data.sections as ParsedSection[], clusters: [], profile_schema: [] };
         } else {
           throw new Error("Unsupported file type. Use JSON, PDF, DOCX, or XLSX.");
         }
       }
-      if (!result.length) throw new Error("No questions found.");
-      setPreview(result);
+      if (!parsed.sections.length) throw new Error("No questions found.");
+      setPreview(parsed.sections);
+      setParsedClusters(parsed.clusters);
+      setProfileSchema(parsed.profile_schema);
     } catch (e: any) {
       toast.error(e.message || "Failed to parse");
     } finally {
@@ -143,15 +156,16 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
           console.log("Processing cluster:", name, "normalized:", normalizedName);
           
           if (!effectiveMap.has(normalizedName)) {
-            // Get cluster info from detectedClusters map
-            const clusterInfo = detectedClusters.get(name) ?? { name, icon_emoji: '✨', description: '', possible_careers: [] };
-            console.log("Creating new cluster:", name, "with info:", clusterInfo);
-            
+            // Prefer rich cluster info from top-level "clusters" array if present
+            const topLevel = parsedClusters.find(pc => pc.name.trim().toLowerCase() === normalizedName);
+            const clusterInfo = topLevel ?? detectedClusters.get(name) ?? { name, icon_emoji: '✨', description: '', possible_careers: [] };
+
             const { data, error } = await supabase.from("career_clusters").insert({
               name,
               icon_emoji: clusterInfo.icon_emoji ?? '✨',
               description: clusterInfo.description ?? `Auto-created from import`,
               possible_careers: clusterInfo.possible_careers ?? [],
+              profile_attributes: clusterInfo.profile_attributes ?? {},
               color_hex: colors[colorIndex++ % colors.length],
               questionnaire_id: questionnaireId,
             } as any).select().single();
@@ -194,6 +208,21 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
         }
         
         console.log("Final effectiveMap after auto-creation:", Array.from(effectiveMap.entries()));
+      }
+
+      // Persist profile_schema on the questionnaire if provided
+      if (profileSchema.length) {
+        await supabase.from("questionnaires").update({ profile_schema: profileSchema } as any).eq("id", questionnaireId);
+      }
+
+      // For existing clusters that match an entry in parsedClusters, merge profile_attributes
+      for (const pc of parsedClusters) {
+        const existingId = effectiveMap.get(pc.name.trim().toLowerCase());
+        if (existingId && pc.profile_attributes && Object.keys(pc.profile_attributes).length) {
+          await supabase.from("career_clusters")
+            .update({ profile_attributes: pc.profile_attributes } as any)
+            .eq("id", existingId);
+        }
       }
 
       const { data: existing } = await supabase.from("sections").select("order_index").eq("questionnaire_id", questionnaireId).order("order_index", { ascending: false }).limit(1);
@@ -360,10 +389,41 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
   );
 }
 
-function normalizeJson(data: any): ParsedSection[] {
-  if (!data) return [];
-  if (Array.isArray(data)) return data.map((s) => ({ title: s.title || "Untitled", description: s.description, questions: (s.questions || []).map((q: any) => ({ statement: q.statement || q.question || "", weights: q.weights })) }));
-  if ("sections" in data) return normalizeJson(data.sections);
-  if ("title" in data || "statement" in data) return [{ title: (data as any).title || "Untitled", description: (data as any).description, questions: [{ statement: (data as any).statement || (data as any).question || "", weights: (data as any).weights }] }];
-  return [];
+function normalizeJson(data: any): ParsedDoc {
+  const empty: ParsedDoc = { sections: [], clusters: [], profile_schema: [] };
+  if (!data) return empty;
+  const extractClusters = (d: any): ClusterInfo[] => {
+    if (!d || typeof d !== "object") return [];
+    const arr = d.clusters || d.categories || d.cluster_definitions;
+    if (!Array.isArray(arr)) return [];
+    return arr.map((c: any) => ({
+      name: String(c.name ?? c.title ?? "").trim(),
+      icon_emoji: c.icon_emoji ?? c.emoji ?? "✨",
+      description: c.description ?? "",
+      possible_careers: Array.isArray(c.possible_careers) ? c.possible_careers : [],
+      profile_attributes: (c.profile_attributes && typeof c.profile_attributes === "object") ? c.profile_attributes : {},
+    })).filter((c: ClusterInfo) => c.name);
+  };
+  const extractSchema = (d: any): string[] => {
+    if (Array.isArray(d?.profile_schema)) return d.profile_schema.map((x: any) => String(x));
+    return [];
+  };
+  const sectionsFrom = (arr: any[]): ParsedSection[] => arr.map((s) => ({
+    title: s.title || "Untitled",
+    description: s.description,
+    questions: (s.questions || []).map((q: any) => ({ statement: q.statement || q.question || "", weights: q.weights })),
+  }));
+
+  if (Array.isArray(data)) return { ...empty, sections: sectionsFrom(data) };
+  if ("sections" in data) {
+    return {
+      sections: sectionsFrom(data.sections || []),
+      clusters: extractClusters(data),
+      profile_schema: extractSchema(data),
+    };
+  }
+  if ("title" in data || "statement" in data) {
+    return { ...empty, sections: [{ title: data.title || "Untitled", description: data.description, questions: [{ statement: data.statement || data.question || "", weights: data.weights }] }] };
+  }
+  return empty;
 }

@@ -121,6 +121,9 @@ export default function QuestionnaireTake() {
       const { error: resErr } = await supabase.from("results").insert(resRows);
       if (resErr) throw resErr;
 
+      // Fire-and-forget AI synthesis (background)
+      supabase.functions.invoke("synthesize-profile", { body: { response_id: resp.id } }).catch(() => {});
+
       navigate(`/student/results/${resp.id}`);
     } catch (e: any) {
       toast.error(e.message || "Couldn't submit. Try again.");

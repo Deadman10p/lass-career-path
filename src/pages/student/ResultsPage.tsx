@@ -10,7 +10,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 import { Download, RotateCcw, ArrowLeft, Sparkles, Trophy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchClusters } from "@/lib/api";
+import { fetchClusters, fetchActiveClusterIdsForQuestionnaire } from "@/lib/api";
 import { generateInsights, type ClusterScore } from "@/lib/scoring";
 import type { CareerCluster } from "@/lib/types";
 import {
@@ -29,37 +29,42 @@ export default function ResultsPage() {
   const [results, setResults] = useState<ResultRow[]>([]);
   const [questionnaireId, setQuestionnaireId] = useState<string>("");
   const [submittedAt, setSubmittedAt] = useState<string>("");
+  const [activeIds, setActiveIds] = useState<Set<string>>(new Set());
+  const [insight, setInsight] = useState<any>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const [cs, { data: resp }, { data: rs }] = await Promise.all([
-        fetchClusters(questionnaireId || undefined),
-        supabase.from("responses").select("*").eq("id", responseId).maybeSingle(),
+      const { data: resp } = await supabase.from("responses").select("*").eq("id", responseId).maybeSingle();
+      if (!resp) { setLoading(false); return; }
+      setQuestionnaireId(resp.questionnaire_id);
+      setSubmittedAt(resp.submitted_at);
+      const [cs, { data: rs }, activeSet, { data: ins }] = await Promise.all([
+        fetchClusters(resp.questionnaire_id),
         supabase.from("results").select("*").eq("response_id", responseId),
+        fetchActiveClusterIdsForQuestionnaire(resp.questionnaire_id),
+        supabase.from("response_insights").select("*").eq("response_id", responseId).maybeSingle(),
       ]);
       setClusters(cs);
       setResults((rs ?? []) as ResultRow[]);
-      if (resp) {
-        setQuestionnaireId(resp.questionnaire_id);
-        setSubmittedAt(resp.submitted_at);
-      }
+      setActiveIds(activeSet);
+      setInsight(ins?.summary ?? null);
       setLoading(false);
     })();
   }, [responseId]);
 
   const ranked: ClusterScore[] = useMemo(() => {
-    if (!clusters.length || !results.length) return [];
-    // Compute max possible per cluster from current weights
+    if (!clusters.length) return [];
     return clusters
+      .filter((c) => activeIds.has(c.id) || (results.find(r => r.career_cluster_id === c.id)?.total_score ?? 0) > 0)
       .map((c) => {
         const r = results.find((x) => x.career_cluster_id === c.id);
         const total = r?.total_score ?? 0;
         return { cluster: c, total, max: 0, percent: 0 };
       })
       .sort((a, b) => b.total - a.total);
-  }, [clusters, results]);
+  }, [clusters, results, activeIds]);
 
   // Normalise so the top cluster = 100%, others relative to it (for visual)
   const ranked100 = useMemo(() => {
@@ -195,7 +200,36 @@ export default function ResultsPage() {
           ))}
         </motion.div>
 
-        {/* RANKED LIST */}
+        {/* AI OVERVIEW */}
+        {insight?.overview && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32, duration: 0.5 }}
+            className="rounded-2xl border border-student/30 bg-student/5 p-5 shadow-card">
+            <div className="mb-1 flex items-center gap-2 text-xs uppercase tracking-widest text-student"><Sparkles className="h-4 w-4" /> Personalised summary</div>
+            <p className="text-sm leading-relaxed text-foreground/90">{insight.overview}</p>
+          </motion.div>
+        )}
+
+        {/* ADAPTIVE PROFILE ATTRIBUTES — top cluster */}
+        {(() => {
+          const topCluster = ranked100[0]?.cluster;
+          const aiAttrs = insight?.by_cluster?.[topCluster?.id ?? ""] as Record<string, string> | undefined;
+          const baseAttrs = (topCluster?.profile_attributes ?? {}) as Record<string, string>;
+          const merged: Record<string, string> = { ...baseAttrs, ...(aiAttrs ?? {}) };
+          const keys = Object.keys(merged).filter(k => merged[k]);
+          if (!keys.length) return null;
+          return (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.34, duration: 0.5 }}
+              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {keys.map(k => (
+                <div key={k} className="rounded-2xl border border-border bg-card p-5 shadow-card">
+                  <div className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{k}</div>
+                  <p className="mt-2 text-sm text-foreground/90">{merged[k]}</p>
+                </div>
+              ))}
+            </motion.div>
+          );
+        })()}
+
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.5 }}
           className="rounded-2xl border border-border bg-card shadow-card">
           <div className="border-b border-border p-5">
