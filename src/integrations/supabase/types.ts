@@ -95,6 +95,7 @@ export type Database = {
           id: string
           name: string
           possible_careers: string[]
+          profile_attributes: Json
           questionnaire_id: string | null
           updated_at: string
         }
@@ -106,6 +107,7 @@ export type Database = {
           id?: string
           name: string
           possible_careers?: string[]
+          profile_attributes?: Json
           questionnaire_id?: string | null
           updated_at?: string
         }
@@ -117,7 +119,35 @@ export type Database = {
           id?: string
           name?: string
           possible_careers?: string[]
+          profile_attributes?: Json
           questionnaire_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      general_profiles: {
+        Row: {
+          created_at: string
+          id: string
+          inventories_count: number
+          student_id: string
+          summary: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          inventories_count?: number
+          student_id: string
+          summary?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          inventories_count?: number
+          student_id?: string
+          summary?: Json
           updated_at?: string
         }
         Relationships: []
@@ -195,6 +225,7 @@ export type Database = {
           description: string
           id: string
           is_published: boolean
+          profile_schema: Json
           title: string
           updated_at: string
         }
@@ -204,6 +235,7 @@ export type Database = {
           description?: string
           id?: string
           is_published?: boolean
+          profile_schema?: Json
           title?: string
           updated_at?: string
         }
@@ -213,6 +245,7 @@ export type Database = {
           description?: string
           id?: string
           is_published?: boolean
+          profile_schema?: Json
           title?: string
           updated_at?: string
         }
@@ -249,6 +282,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      response_insights: {
+        Row: {
+          created_at: string
+          id: string
+          questionnaire_id: string
+          response_id: string
+          student_id: string
+          summary: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          questionnaire_id: string
+          response_id: string
+          student_id: string
+          summary?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          questionnaire_id?: string
+          response_id?: string
+          student_id?: string
+          summary?: Json
+          updated_at?: string
+        }
+        Relationships: []
       }
       responses: {
         Row: {
