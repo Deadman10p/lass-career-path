@@ -200,7 +200,36 @@ export default function ResultsPage() {
           ))}
         </motion.div>
 
-        {/* RANKED LIST */}
+        {/* AI OVERVIEW */}
+        {insight?.overview && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32, duration: 0.5 }}
+            className="rounded-2xl border border-student/30 bg-student/5 p-5 shadow-card">
+            <div className="mb-1 flex items-center gap-2 text-xs uppercase tracking-widest text-student"><Sparkles className="h-4 w-4" /> Personalised summary</div>
+            <p className="text-sm leading-relaxed text-foreground/90">{insight.overview}</p>
+          </motion.div>
+        )}
+
+        {/* ADAPTIVE PROFILE ATTRIBUTES — top cluster */}
+        {(() => {
+          const topCluster = ranked100[0]?.cluster;
+          const aiAttrs = insight?.by_cluster?.[topCluster?.id ?? ""] as Record<string, string> | undefined;
+          const baseAttrs = (topCluster?.profile_attributes ?? {}) as Record<string, string>;
+          const merged: Record<string, string> = { ...baseAttrs, ...(aiAttrs ?? {}) };
+          const keys = Object.keys(merged).filter(k => merged[k]);
+          if (!keys.length) return null;
+          return (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.34, duration: 0.5 }}
+              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {keys.map(k => (
+                <div key={k} className="rounded-2xl border border-border bg-card p-5 shadow-card">
+                  <div className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{k}</div>
+                  <p className="mt-2 text-sm text-foreground/90">{merged[k]}</p>
+                </div>
+              ))}
+            </motion.div>
+          );
+        })()}
+
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.5 }}
           className="rounded-2xl border border-border bg-card shadow-card">
           <div className="border-b border-border p-5">
