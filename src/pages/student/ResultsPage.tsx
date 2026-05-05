@@ -36,32 +36,35 @@ export default function ResultsPage() {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const [cs, { data: resp }, { data: rs }] = await Promise.all([
-        fetchClusters(questionnaireId || undefined),
-        supabase.from("responses").select("*").eq("id", responseId).maybeSingle(),
+      const { data: resp } = await supabase.from("responses").select("*").eq("id", responseId).maybeSingle();
+      if (!resp) { setLoading(false); return; }
+      setQuestionnaireId(resp.questionnaire_id);
+      setSubmittedAt(resp.submitted_at);
+      const [cs, { data: rs }, activeSet, { data: ins }] = await Promise.all([
+        fetchClusters(resp.questionnaire_id),
         supabase.from("results").select("*").eq("response_id", responseId),
+        fetchActiveClusterIdsForQuestionnaire(resp.questionnaire_id),
+        supabase.from("response_insights").select("*").eq("response_id", responseId).maybeSingle(),
       ]);
       setClusters(cs);
       setResults((rs ?? []) as ResultRow[]);
-      if (resp) {
-        setQuestionnaireId(resp.questionnaire_id);
-        setSubmittedAt(resp.submitted_at);
-      }
+      setActiveIds(activeSet);
+      setInsight(ins?.summary ?? null);
       setLoading(false);
     })();
   }, [responseId]);
 
   const ranked: ClusterScore[] = useMemo(() => {
-    if (!clusters.length || !results.length) return [];
-    // Compute max possible per cluster from current weights
+    if (!clusters.length) return [];
     return clusters
+      .filter((c) => activeIds.has(c.id) || (results.find(r => r.career_cluster_id === c.id)?.total_score ?? 0) > 0)
       .map((c) => {
         const r = results.find((x) => x.career_cluster_id === c.id);
         const total = r?.total_score ?? 0;
         return { cluster: c, total, max: 0, percent: 0 };
       })
       .sort((a, b) => b.total - a.total);
-  }, [clusters, results]);
+  }, [clusters, results, activeIds]);
 
   // Normalise so the top cluster = 100%, others relative to it (for visual)
   const ranked100 = useMemo(() => {
