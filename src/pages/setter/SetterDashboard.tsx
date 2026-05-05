@@ -70,6 +70,7 @@ export default function SetterDashboard() {
           </div>
           <div className="flex gap-2">
             <Button asChild variant="outline" size="sm"><Link to="/setter/manual"><BookOpen className="mr-1.5 h-4 w-4"/>Manual</Link></Button>
+            <Button asChild variant="outline" size="sm"><Link to="/setter/school-profile"><BarChart3 className="mr-1.5 h-4 w-4"/>School Profiles</Link></Button>
             <Button onClick={handleCreate} className="gradient-setter text-setter-foreground border-0 shadow-glow">
               <Plus className="mr-1.5 h-4 w-4" /> New Questionnaire
             </Button>
