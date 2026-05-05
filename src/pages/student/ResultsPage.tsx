@@ -10,7 +10,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 import { Download, RotateCcw, ArrowLeft, Sparkles, Trophy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchClusters } from "@/lib/api";
+import { fetchClusters, fetchActiveClusterIdsForQuestionnaire } from "@/lib/api";
 import { generateInsights, type ClusterScore } from "@/lib/scoring";
 import type { CareerCluster } from "@/lib/types";
 import {
@@ -29,6 +29,8 @@ export default function ResultsPage() {
   const [results, setResults] = useState<ResultRow[]>([]);
   const [questionnaireId, setQuestionnaireId] = useState<string>("");
   const [submittedAt, setSubmittedAt] = useState<string>("");
+  const [activeIds, setActiveIds] = useState<Set<string>>(new Set());
+  const [insight, setInsight] = useState<any>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
