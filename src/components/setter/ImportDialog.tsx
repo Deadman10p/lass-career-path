@@ -13,7 +13,18 @@ import type { CareerCluster } from "@/lib/types";
 
 interface ParsedQuestion { statement: string; weights?: Record<string, number> }
 interface ParsedSection { title: string; description?: string; questions: ParsedQuestion[] }
-interface ClusterInfo { name: string; icon_emoji?: string; description?: string; possible_careers?: string[] }
+interface ClusterInfo {
+  name: string;
+  icon_emoji?: string;
+  description?: string;
+  possible_careers?: string[];
+  profile_attributes?: Record<string, string>;
+}
+interface ParsedDoc {
+  sections: ParsedSection[];
+  clusters: ClusterInfo[];
+  profile_schema: string[];
+}
 
 export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }: {
   open: boolean; onOpenChange: (v: boolean) => void; questionnaireId: string; onImported: () => void;
