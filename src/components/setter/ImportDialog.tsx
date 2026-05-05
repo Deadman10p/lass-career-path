@@ -373,10 +373,41 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
   );
 }
 
-function normalizeJson(data: any): ParsedSection[] {
-  if (!data) return [];
-  if (Array.isArray(data)) return data.map((s) => ({ title: s.title || "Untitled", description: s.description, questions: (s.questions || []).map((q: any) => ({ statement: q.statement || q.question || "", weights: q.weights })) }));
-  if ("sections" in data) return normalizeJson(data.sections);
-  if ("title" in data || "statement" in data) return [{ title: (data as any).title || "Untitled", description: (data as any).description, questions: [{ statement: (data as any).statement || (data as any).question || "", weights: (data as any).weights }] }];
-  return [];
+function normalizeJson(data: any): ParsedDoc {
+  const empty: ParsedDoc = { sections: [], clusters: [], profile_schema: [] };
+  if (!data) return empty;
+  const extractClusters = (d: any): ClusterInfo[] => {
+    if (!d || typeof d !== "object") return [];
+    const arr = d.clusters || d.categories || d.cluster_definitions;
+    if (!Array.isArray(arr)) return [];
+    return arr.map((c: any) => ({
+      name: String(c.name ?? c.title ?? "").trim(),
+      icon_emoji: c.icon_emoji ?? c.emoji ?? "✨",
+      description: c.description ?? "",
+      possible_careers: Array.isArray(c.possible_careers) ? c.possible_careers : [],
+      profile_attributes: (c.profile_attributes && typeof c.profile_attributes === "object") ? c.profile_attributes : {},
+    })).filter((c: ClusterInfo) => c.name);
+  };
+  const extractSchema = (d: any): string[] => {
+    if (Array.isArray(d?.profile_schema)) return d.profile_schema.map((x: any) => String(x));
+    return [];
+  };
+  const sectionsFrom = (arr: any[]): ParsedSection[] => arr.map((s) => ({
+    title: s.title || "Untitled",
+    description: s.description,
+    questions: (s.questions || []).map((q: any) => ({ statement: q.statement || q.question || "", weights: q.weights })),
+  }));
+
+  if (Array.isArray(data)) return { ...empty, sections: sectionsFrom(data) };
+  if ("sections" in data) {
+    return {
+      sections: sectionsFrom(data.sections || []),
+      clusters: extractClusters(data),
+      profile_schema: extractSchema(data),
+    };
+  }
+  if ("title" in data || "statement" in data) {
+    return { ...empty, sections: [{ title: data.title || "Untitled", description: data.description, questions: [{ statement: data.statement || data.question || "", weights: data.weights }] }] };
+  }
+  return empty;
 }
