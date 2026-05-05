@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, BarChart3, Download, Users, FileQuestion, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchClusters, fetchFullQuestionnaire } from "@/lib/api";
+import { fetchClusters, fetchFullQuestionnaire, fetchActiveClusterIdsForQuestionnaire } from "@/lib/api";
 import type { CareerCluster, FullQuestionnaire } from "@/lib/types";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -34,11 +34,13 @@ export default function Analytics() {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const [d, cs, { data: resps }] = await Promise.all([
+      const [d, csAll, { data: resps }, activeSet] = await Promise.all([
         fetchFullQuestionnaire(id),
         fetchClusters(id),
         supabase.from("responses").select("*").eq("questionnaire_id", id).order("submitted_at", { ascending: false }),
+        fetchActiveClusterIdsForQuestionnaire(id),
       ]);
+      const cs = csAll.filter(c => activeSet.has(c.id));
       setDoc(d);
       setClusters(cs);
 
