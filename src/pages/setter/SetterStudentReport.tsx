@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { ArrowLeft, Trophy, User as UserIcon, Calendar, ClipboardList } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchClusters, fetchFullQuestionnaire } from "@/lib/api";
+import { fetchClusters, fetchFullQuestionnaire, fetchActiveClusterIdsForQuestionnaire } from "@/lib/api";
 import { generateInsights } from "@/lib/scoring";
 import type { CareerCluster, FullQuestionnaire } from "@/lib/types";
 import {
@@ -29,6 +29,8 @@ export default function SetterStudentReport() {
   const [doc, setDoc] = useState<FullQuestionnaire | null>(null);
   const [student, setStudent] = useState<{ full_name: string; class_name: string | null; stream: string | null } | null>(null);
   const [submittedAt, setSubmittedAt] = useState<string>("");
+  const [activeIds, setActiveIds] = useState<Set<string>>(new Set());
+  const [insight, setInsight] = useState<any>(null);
 
   useEffect(() => {
     (async () => {
@@ -37,31 +39,37 @@ export default function SetterStudentReport() {
       if (!resp) { setLoading(false); return; }
       setSubmittedAt(resp.submitted_at);
 
-      const [d, cs, { data: rs }, { data: ans }, { data: prof }] = await Promise.all([
+      const [d, cs, { data: rs }, { data: ans }, { data: prof }, activeSet, { data: ins }] = await Promise.all([
         fetchFullQuestionnaire(resp.questionnaire_id),
         fetchClusters(resp.questionnaire_id),
         supabase.from("results").select("*").eq("response_id", responseId),
         supabase.from("answers").select("*").eq("response_id", responseId),
         supabase.from("profiles").select("full_name, class_name, stream").eq("user_id", resp.student_id).maybeSingle(),
+        fetchActiveClusterIdsForQuestionnaire(resp.questionnaire_id),
+        supabase.from("response_insights").select("*").eq("response_id", responseId).maybeSingle(),
       ]);
       setDoc(d);
       setClusters(cs);
       setResults((rs ?? []) as ResultRow[]);
       setAnswers((ans ?? []) as AnswerRow[]);
       setStudent(prof as any);
+      setActiveIds(activeSet);
+      setInsight(ins?.summary ?? null);
       setLoading(false);
     })();
   }, [responseId]);
 
   const ranked = useMemo(() => {
     if (!clusters.length) return [];
-    const arr = clusters.map(c => {
-      const r = results.find(x => x.career_cluster_id === c.id);
-      return { cluster: c, total: r?.total_score ?? 0, max: 0, percent: 0 };
-    }).sort((a, b) => b.total - a.total);
+    const arr = clusters
+      .filter(c => activeIds.has(c.id) || (results.find(x => x.career_cluster_id === c.id)?.total_score ?? 0) > 0)
+      .map(c => {
+        const r = results.find(x => x.career_cluster_id === c.id);
+        return { cluster: c, total: r?.total_score ?? 0, max: 0, percent: 0 };
+      }).sort((a, b) => b.total - a.total);
     const maxTotal = Math.max(...arr.map(r => r.total), 1);
     return arr.map(r => ({ ...r, percent: Math.round((r.total / maxTotal) * 100) }));
-  }, [clusters, results]);
+  }, [clusters, results, activeIds]);
 
   const ratingByQ = useMemo(() => {
     const m = new Map<string, number>();
