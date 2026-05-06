@@ -12,7 +12,7 @@ export interface CareerCluster {
   /** Adaptive per-cluster attributes, e.g. { Strengths: "...", Weaknesses: "...", "Growth Tips": "..." } */
   profile_attributes?: Record<string, string>;
   /** Free-form ordered list of metadata cards, e.g. [{label:"Strengths", content:"..."}, ...] */
-  profile_data?: ProfileDatum[];
+  profile_data?: any;
 }
 
 export interface ProfileDatum { label: string; content: string }
