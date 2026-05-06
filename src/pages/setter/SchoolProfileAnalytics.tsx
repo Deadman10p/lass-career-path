@@ -80,10 +80,11 @@ export default function SchoolProfileAnalytics() {
                   <div className="font-medium">{r.full_name ?? "Unknown"}</div>
                   <div className="text-xs text-muted-foreground">{r.class_name ?? "—"} · {r.stream ?? "—"} · {r.inventories_count} inventor{r.inventories_count === 1 ? "y" : "ies"}</div>
                 </div>
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap items-center gap-2">
                   {(r.summary?.alignments ?? []).slice(0, 2).map((a: string, i: number) => (
                     <Badge key={i} variant="secondary" className="max-w-xs truncate">{a}</Badge>
                   ))}
+                  <Button asChild size="sm" variant="outline"><Link to={`/setter/student/${r.student_id}`}>Open profile</Link></Button>
                 </div>
               </li>
             ))}
