@@ -81,7 +81,8 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
                   name,
                   icon_emoji: (weightVal as any).icon_emoji ?? '✨',
                   description: (weightVal as any).description ?? '',
-                  possible_careers: (weightVal as any).possible_careers ?? []
+                  possible_careers: (weightVal as any).possible_careers ?? [],
+                  profile_data: Array.isArray((weightVal as any).profile_data) ? (weightVal as any).profile_data : [],
                 });
               } else {
                 clusterInfoMap.set(name, { name, icon_emoji: '✨', description: '', possible_careers: [] });
