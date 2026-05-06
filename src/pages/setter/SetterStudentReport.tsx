@@ -160,10 +160,8 @@ export default function SetterStudentReport() {
         {/* Adaptive profile-attribute cards per top clusters */}
         {ranked.slice(0, 3).map(r => {
           const aiAttrs = (insight?.by_cluster?.[r.cluster.id] ?? {}) as Record<string, string>;
-          const baseAttrs = (r.cluster.profile_attributes ?? {}) as Record<string, string>;
-          const merged: Record<string, string> = { ...baseAttrs, ...aiAttrs };
-          const keys = Object.keys(merged).filter(k => merged[k]);
-          if (!keys.length) return null;
+          const data = getProfileData(r.cluster, aiAttrs);
+          if (!data.length) return null;
           return (
             <div key={r.cluster.id} className="rounded-2xl border border-border bg-card p-5 shadow-card">
               <div className="mb-3 flex items-center gap-2">
@@ -174,10 +172,10 @@ export default function SetterStudentReport() {
                 </div>
               </div>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {keys.map(k => (
-                  <div key={k} className="rounded-xl border border-border bg-secondary/30 p-4">
-                    <div className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{k}</div>
-                    <p className="mt-1.5 text-sm">{merged[k]}</p>
+                {data.map((d, i) => (
+                  <div key={`${d.label}-${i}`} className="rounded-xl border border-border bg-secondary/30 p-4">
+                    <div className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{d.label}</div>
+                    <p className="mt-1.5 text-sm">{d.content}</p>
                   </div>
                 ))}
               </div>
