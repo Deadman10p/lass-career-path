@@ -193,3 +193,29 @@ export function ClusterManager({ clusters, onChange, questionnaireId }: {
     </div>
   );
 }
+
+function ProfileDataEditor({ cluster, onChange }: { cluster: CareerCluster; onChange: (pd: { label: string; content: string }[]) => void }) {
+  const items = Array.isArray(cluster.profile_data) ? cluster.profile_data : [];
+  const update = (idx: number, patch: Partial<{ label: string; content: string }>) => {
+    const next = items.map((it: any, i: number) => i === idx ? { ...it, ...patch } : it);
+    onChange(next);
+  };
+  const add = () => onChange([...items, { label: "", content: "" }]);
+  const remove = (idx: number) => onChange(items.filter((_: any, i: number) => i !== idx));
+  return (
+    <div className="space-y-2 rounded-lg border border-dashed border-border p-3">
+      <div className="flex items-center justify-between gap-2">
+        <Label className="text-xs uppercase tracking-widest text-muted-foreground">Metadata fields</Label>
+        <Button size="sm" variant="ghost" onClick={add}><Plus className="mr-1 h-3 w-3" /> Add field</Button>
+      </div>
+      {items.length === 0 && <p className="text-xs text-muted-foreground">No fields yet. Add labels like <em>Strengths</em>, <em>Weaknesses</em>, <em>Growth Tips</em>, <em>Famous Examples</em>… anything you want to surface on the report.</p>}
+      {items.map((it: any, i: number) => (
+        <div key={i} className="grid gap-2 sm:grid-cols-[180px_1fr_auto]">
+          <Input value={it.label ?? ""} onChange={(e) => update(i, { label: e.target.value })} placeholder="Label (e.g. Strengths)" />
+          <Textarea rows={2} value={it.content ?? ""} onChange={(e) => update(i, { content: e.target.value })} placeholder="Content shown in the report card" />
+          <Button size="icon" variant="ghost" onClick={() => remove(i)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+        </div>
+      ))}
+    </div>
+  );
+}
