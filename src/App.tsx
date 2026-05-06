@@ -16,6 +16,7 @@ import SetterManual from "./pages/setter/SetterManual.tsx";
 import SetterResults from "./pages/setter/SetterResults.tsx";
 import SetterStudentReport from "./pages/setter/SetterStudentReport.tsx";
 import SchoolProfileAnalytics from "./pages/setter/SchoolProfileAnalytics.tsx";
+import MasterStudentProfile from "./pages/setter/MasterStudentProfile.tsx";
 import StudentDashboard from "./pages/student/StudentDashboard.tsx";
 import QuestionnaireTake from "./pages/student/QuestionnaireTake.tsx";
 import ResultsPage from "./pages/student/ResultsPage.tsx";
