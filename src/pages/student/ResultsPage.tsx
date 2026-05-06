@@ -10,7 +10,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 import { Download, RotateCcw, ArrowLeft, Sparkles, Trophy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchClusters, fetchActiveClusterIdsForQuestionnaire } from "@/lib/api";
+import { fetchClusters, fetchActiveClusterIdsForQuestionnaire, getProfileData } from "@/lib/api";
 import { generateInsights, type ClusterScore } from "@/lib/scoring";
 import type { CareerCluster } from "@/lib/types";
 import {
@@ -57,7 +57,7 @@ export default function ResultsPage() {
   const ranked: ClusterScore[] = useMemo(() => {
     if (!clusters.length) return [];
     return clusters
-      .filter((c) => activeIds.has(c.id) || (results.find(r => r.career_cluster_id === c.id)?.total_score ?? 0) > 0)
+      .filter((c) => activeIds.has(c.id))
       .map((c) => {
         const r = results.find((x) => x.career_cluster_id === c.id);
         const total = r?.total_score ?? 0;
@@ -212,18 +212,17 @@ export default function ResultsPage() {
         {/* ADAPTIVE PROFILE ATTRIBUTES — top cluster */}
         {(() => {
           const topCluster = ranked100[0]?.cluster;
-          const aiAttrs = insight?.by_cluster?.[topCluster?.id ?? ""] as Record<string, string> | undefined;
-          const baseAttrs = (topCluster?.profile_attributes ?? {}) as Record<string, string>;
-          const merged: Record<string, string> = { ...baseAttrs, ...(aiAttrs ?? {}) };
-          const keys = Object.keys(merged).filter(k => merged[k]);
-          if (!keys.length) return null;
+          if (!topCluster) return null;
+          const aiAttrs = insight?.by_cluster?.[topCluster.id] as Record<string, string> | undefined;
+          const data = getProfileData(topCluster, aiAttrs);
+          if (!data.length) return null;
           return (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.34, duration: 0.5 }}
               className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {keys.map(k => (
-                <div key={k} className="rounded-2xl border border-border bg-card p-5 shadow-card">
-                  <div className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{k}</div>
-                  <p className="mt-2 text-sm text-foreground/90">{merged[k]}</p>
+              {data.map((d, i) => (
+                <div key={`${d.label}-${i}`} className="rounded-2xl border border-border bg-card p-5 shadow-card">
+                  <div className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{d.label}</div>
+                  <p className="mt-2 text-sm text-foreground/90">{d.content}</p>
                 </div>
               ))}
             </motion.div>

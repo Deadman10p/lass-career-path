@@ -11,7 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchClusters } from "@/lib/api";
 import type { CareerCluster } from "@/lib/types";
 
-interface ParsedQuestion { statement: string; weights?: Record<string, number> }
+interface ProfileDatum { label: string; content: string }
+interface ParsedQuestion { statement: string; weights?: Record<string, any> }
 interface ParsedSection { title: string; description?: string; questions: ParsedQuestion[] }
 interface ClusterInfo {
   name: string;
@@ -19,6 +20,7 @@ interface ClusterInfo {
   description?: string;
   possible_careers?: string[];
   profile_attributes?: Record<string, string>;
+  profile_data?: ProfileDatum[];
 }
 interface ParsedDoc {
   sections: ParsedSection[];
@@ -79,7 +81,8 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
                   name,
                   icon_emoji: (weightVal as any).icon_emoji ?? '✨',
                   description: (weightVal as any).description ?? '',
-                  possible_careers: (weightVal as any).possible_careers ?? []
+                  possible_careers: (weightVal as any).possible_careers ?? [],
+                  profile_data: Array.isArray((weightVal as any).profile_data) ? (weightVal as any).profile_data : [],
                 });
               } else {
                 clusterInfoMap.set(name, { name, icon_emoji: '✨', description: '', possible_careers: [] });
@@ -166,6 +169,7 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
               description: clusterInfo.description ?? `Auto-created from import`,
               possible_careers: clusterInfo.possible_careers ?? [],
               profile_attributes: clusterInfo.profile_attributes ?? {},
+              profile_data: clusterInfo.profile_data ?? [],
               color_hex: colors[colorIndex++ % colors.length],
               questionnaire_id: questionnaireId,
             } as any).select().single();
@@ -218,10 +222,12 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
       // For existing clusters that match an entry in parsedClusters, merge profile_attributes
       for (const pc of parsedClusters) {
         const existingId = effectiveMap.get(pc.name.trim().toLowerCase());
-        if (existingId && pc.profile_attributes && Object.keys(pc.profile_attributes).length) {
-          await supabase.from("career_clusters")
-            .update({ profile_attributes: pc.profile_attributes } as any)
-            .eq("id", existingId);
+        if (!existingId) continue;
+        const patch: any = {};
+        if (pc.profile_attributes && Object.keys(pc.profile_attributes).length) patch.profile_attributes = pc.profile_attributes;
+        if (pc.profile_data && pc.profile_data.length) patch.profile_data = pc.profile_data;
+        if (Object.keys(patch).length) {
+          await supabase.from("career_clusters").update(patch).eq("id", existingId);
         }
       }
 
@@ -402,6 +408,11 @@ function normalizeJson(data: any): ParsedDoc {
       description: c.description ?? "",
       possible_careers: Array.isArray(c.possible_careers) ? c.possible_careers : [],
       profile_attributes: (c.profile_attributes && typeof c.profile_attributes === "object") ? c.profile_attributes : {},
+      profile_data: Array.isArray(c.profile_data)
+        ? c.profile_data
+            .map((p: any) => ({ label: String(p?.label ?? "").trim(), content: String(p?.content ?? "").trim() }))
+            .filter((p: ProfileDatum) => p.label && p.content)
+        : [],
     })).filter((c: ClusterInfo) => c.name);
   };
   const extractSchema = (d: any): string[] => {

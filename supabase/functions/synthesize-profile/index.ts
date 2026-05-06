@@ -37,16 +37,29 @@ Deno.serve(async (req) => {
       .sort((a: any, b: any) => b.total_score - a.total_score);
     const top3 = ranked.slice(0, 3);
 
+    // Build a per-cluster label list pulled from EITHER profile_data (new) OR profile_attributes (legacy) OR questionnaire profile_schema (fallback)
+    const clusterLabels = (c: any): string[] => {
+      const fromData = Array.isArray(c.profile_data) ? c.profile_data.map((p: any) => String(p?.label ?? "").trim()).filter(Boolean) : [];
+      if (fromData.length) return fromData;
+      const fromAttrs = c.profile_attributes && typeof c.profile_attributes === "object" ? Object.keys(c.profile_attributes) : [];
+      if (fromAttrs.length) return fromAttrs;
+      return Array.isArray(q?.profile_schema) && q!.profile_schema!.length ? (q!.profile_schema as string[]) : ["Strengths", "Weaknesses", "Growth Tips"];
+    };
+
     const prompt = `You are a school career counsellor synthesising a personalised report.
 Questionnaire: "${q?.title}" — ${q?.description ?? ""}
-Schema attributes to fill per cluster: ${JSON.stringify(q?.profile_schema ?? ["Strengths", "Weaknesses", "Growth Tips"])}
 
-Top clusters and totals:
-${top3.map((r: any) => `- ${r.cluster.name} (${r.total_score} pts): base attrs=${JSON.stringify(r.cluster.profile_attributes ?? {})}`).join("\n")}
+For each top cluster below, write a personalised, specific entry for EVERY label listed.
+Top clusters:
+${top3.map((r: any) => `- id=${r.cluster.id} name="${r.cluster.name}" total=${r.total_score}
+  labels=${JSON.stringify(clusterLabels(r.cluster))}
+  base_profile_data=${JSON.stringify(r.cluster.profile_data ?? [])}
+  base_profile_attributes=${JSON.stringify(r.cluster.profile_attributes ?? {})}`).join("\n")}
 
-The student gave ${(answers ?? []).length} ratings. Write JSON of shape:
-{ "overview": "2-3 sentence personalised summary", "by_cluster": { "<clusterId>": { "<AttributeKey>": "personalised text" } } }
-Keep each attribute under 240 chars, warm and specific.`;
+The student gave ${(answers ?? []).length} ratings. Return JSON of shape:
+{ "overview": "2-3 sentence personalised summary referencing the student's strongest areas",
+  "by_cluster": { "<clusterId>": { "<Label>": "personalised text" } } }
+Use EXACTLY the labels listed for each cluster. Keep each entry under 240 chars, warm and specific.`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -84,6 +97,8 @@ Keep each attribute under 240 chars, warm and specific.`;
     const weaknesses: string[] = [];
     const growth: string[] = [];
     const inventories: any[] = [];
+    /** Dynamic aggregation: { [label]: string[] } across every label the AI ever produced for this student. */
+    const dynamic: Record<string, string[]> = {};
 
     for (const r of allResp ?? []) {
       const ins = (allInsights ?? []).find((x: any) => x.response_id === r.id);
@@ -102,9 +117,15 @@ Keep each attribute under 240 chars, warm and specific.`;
       const byCluster = ins?.summary?.by_cluster ?? {};
       for (const cid of Object.keys(byCluster)) {
         const a = byCluster[cid] || {};
-        if (a.Strengths) strengths.push(a.Strengths);
-        if (a.Weaknesses) weaknesses.push(a.Weaknesses);
-        if (a["Growth Tips"]) growth.push(a["Growth Tips"]);
+        for (const [label, val] of Object.entries(a)) {
+          const text = String(val ?? "").trim();
+          if (!text) continue;
+          (dynamic[label] ||= []).push(text);
+          // Back-compat buckets
+          if (label === "Strengths") strengths.push(text);
+          else if (label === "Weaknesses") weaknesses.push(text);
+          else if (label === "Growth Tips") growth.push(text);
+        }
       }
     }
 
@@ -132,7 +153,7 @@ Keep each attribute under 240 chars, warm and specific.`;
     await sb.from("general_profiles").upsert({
       student_id: resp.student_id,
       inventories_count: inventories.length,
-      summary: { strengths, weaknesses, growth, alignments, inventories },
+      summary: { strengths, weaknesses, growth, alignments, inventories, dynamic },
     }, { onConflict: "student_id" });
 
     return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

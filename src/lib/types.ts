@@ -11,7 +11,11 @@ export interface CareerCluster {
   questionnaire_id?: string | null;
   /** Adaptive per-cluster attributes, e.g. { Strengths: "...", Weaknesses: "...", "Growth Tips": "..." } */
   profile_attributes?: Record<string, string>;
+  /** Free-form ordered list of metadata cards, e.g. [{label:"Strengths", content:"..."}, ...] */
+  profile_data?: any;
 }
+
+export interface ProfileDatum { label: string; content: string }
 
 export interface Questionnaire {
   id: string;

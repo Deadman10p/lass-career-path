@@ -1,5 +1,42 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { CareerCluster, FullQuestionnaire, SectionWithQuestions, QuestionWithWeights } from "./types";
+import type { CareerCluster, FullQuestionnaire, SectionWithQuestions, QuestionWithWeights, ProfileDatum } from "./types";
+
+/** Coerce the raw `profile_data` JSON into a typed array, merging in legacy `profile_attributes`. */
+export function getProfileData(cluster: CareerCluster, aiByLabel?: Record<string, string>): ProfileDatum[] {
+  const out: ProfileDatum[] = [];
+  const seen = new Set<string>();
+  const raw = Array.isArray(cluster.profile_data) ? cluster.profile_data : [];
+  for (const d of raw) {
+    if (!d || typeof d !== "object") continue;
+    const label = String((d as any).label ?? "").trim();
+    if (!label) continue;
+    const aiContent = aiByLabel?.[label];
+    const content = String(aiContent ?? (d as any).content ?? "").trim();
+    if (!content) continue;
+    out.push({ label, content });
+    seen.add(label.toLowerCase());
+  }
+  // Fold legacy profile_attributes (key/value) in for back-compat
+  const attrs = (cluster.profile_attributes ?? {}) as Record<string, string>;
+  for (const [label, val] of Object.entries(attrs)) {
+    if (!label || seen.has(label.toLowerCase())) continue;
+    const aiContent = aiByLabel?.[label];
+    const content = String(aiContent ?? val ?? "").trim();
+    if (!content) continue;
+    out.push({ label, content });
+    seen.add(label.toLowerCase());
+  }
+  // Also include AI-only labels not in base
+  if (aiByLabel) {
+    for (const [label, val] of Object.entries(aiByLabel)) {
+      if (!label || seen.has(label.toLowerCase())) continue;
+      const content = String(val ?? "").trim();
+      if (!content) continue;
+      out.push({ label, content });
+    }
+  }
+  return out;
+}
 
 export async function fetchClusters(questionnaireId?: string): Promise<CareerCluster[]> {
   let query = supabase.from("career_clusters").select("*");

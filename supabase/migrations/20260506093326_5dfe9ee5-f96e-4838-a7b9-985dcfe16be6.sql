@@ -1,0 +1,1 @@
+ALTER TABLE public.career_clusters ADD COLUMN IF NOT EXISTS profile_data jsonb NOT NULL DEFAULT '[]'::jsonb;
