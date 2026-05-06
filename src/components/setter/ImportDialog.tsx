@@ -11,7 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchClusters } from "@/lib/api";
 import type { CareerCluster } from "@/lib/types";
 
-interface ParsedQuestion { statement: string; weights?: Record<string, number> }
+interface ProfileDatum { label: string; content: string }
+interface ParsedQuestion { statement: string; weights?: Record<string, any> }
 interface ParsedSection { title: string; description?: string; questions: ParsedQuestion[] }
 interface ClusterInfo {
   name: string;
@@ -19,6 +20,7 @@ interface ClusterInfo {
   description?: string;
   possible_careers?: string[];
   profile_attributes?: Record<string, string>;
+  profile_data?: ProfileDatum[];
 }
 interface ParsedDoc {
   sections: ParsedSection[];
