@@ -169,6 +169,7 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
               description: clusterInfo.description ?? `Auto-created from import`,
               possible_careers: clusterInfo.possible_careers ?? [],
               profile_attributes: clusterInfo.profile_attributes ?? {},
+              profile_data: clusterInfo.profile_data ?? [],
               color_hex: colors[colorIndex++ % colors.length],
               questionnaire_id: questionnaireId,
             } as any).select().single();
