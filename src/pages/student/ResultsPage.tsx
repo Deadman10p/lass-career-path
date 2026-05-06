@@ -10,7 +10,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 import { Download, RotateCcw, ArrowLeft, Sparkles, Trophy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchClusters, fetchActiveClusterIdsForQuestionnaire } from "@/lib/api";
+import { fetchClusters, fetchActiveClusterIdsForQuestionnaire, getProfileData } from "@/lib/api";
 import { generateInsights, type ClusterScore } from "@/lib/scoring";
 import type { CareerCluster } from "@/lib/types";
 import {
