@@ -224,6 +224,14 @@ export default function SetterManual() {
             <li><strong>Resetting a questionnaire:</strong> deleting it from the dashboard removes its sections, questions, weights, categories and student responses for that questionnaire only — all other questionnaires stay intact.</li>
           </ul>
         </Section>
+        <Section icon={<Sparkles className="h-5 w-5" />} title="13. AI synthesis & Master Student Profile vault">
+          When a student submits a questionnaire, the AI middleware reads each top cluster's <code>profile_data</code> labels and writes a personalised entry for every one of them — the report shows whatever labels you defined.
+          <ul className="mt-2 list-disc pl-5 text-sm">
+            <li>Open <strong>School Profiles</strong> from the dashboard for school-wide trends.</li>
+            <li>From there, click <strong>Open profile</strong> on any student to see their <strong>Master Student Profile</strong> — a unified Growth Record that aggregates the dynamic labels (Strengths, Weaknesses, or whatever you defined) across <em>every</em> inventory the student has ever taken, plus per-inventory snapshots.</li>
+            <li>Reports only ever show categories that were actually scored on this questionnaire — ghost categories from other inventories are filtered out.</li>
+          </ul>
+        </Section>
       </div>
     </PageShell>
   );
