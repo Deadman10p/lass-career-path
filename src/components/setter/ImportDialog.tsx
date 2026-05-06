@@ -222,10 +222,12 @@ export function ImportDialog({ open, onOpenChange, questionnaireId, onImported }
       // For existing clusters that match an entry in parsedClusters, merge profile_attributes
       for (const pc of parsedClusters) {
         const existingId = effectiveMap.get(pc.name.trim().toLowerCase());
-        if (existingId && pc.profile_attributes && Object.keys(pc.profile_attributes).length) {
-          await supabase.from("career_clusters")
-            .update({ profile_attributes: pc.profile_attributes } as any)
-            .eq("id", existingId);
+        if (!existingId) continue;
+        const patch: any = {};
+        if (pc.profile_attributes && Object.keys(pc.profile_attributes).length) patch.profile_attributes = pc.profile_attributes;
+        if (pc.profile_data && pc.profile_data.length) patch.profile_data = pc.profile_data;
+        if (Object.keys(patch).length) {
+          await supabase.from("career_clusters").update(patch).eq("id", existingId);
         }
       }
 
