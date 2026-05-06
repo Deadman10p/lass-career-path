@@ -57,7 +57,7 @@ export default function ResultsPage() {
   const ranked: ClusterScore[] = useMemo(() => {
     if (!clusters.length) return [];
     return clusters
-      .filter((c) => activeIds.has(c.id) || (results.find(r => r.career_cluster_id === c.id)?.total_score ?? 0) > 0)
+      .filter((c) => activeIds.has(c.id))
       .map((c) => {
         const r = results.find((x) => x.career_cluster_id === c.id);
         const total = r?.total_score ?? 0;
