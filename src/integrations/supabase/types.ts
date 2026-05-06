@@ -96,6 +96,7 @@ export type Database = {
           name: string
           possible_careers: string[]
           profile_attributes: Json
+          profile_data: Json
           questionnaire_id: string | null
           updated_at: string
         }
@@ -108,6 +109,7 @@ export type Database = {
           name: string
           possible_careers?: string[]
           profile_attributes?: Json
+          profile_data?: Json
           questionnaire_id?: string | null
           updated_at?: string
         }
@@ -120,6 +122,7 @@ export type Database = {
           name?: string
           possible_careers?: string[]
           profile_attributes?: Json
+          profile_data?: Json
           questionnaire_id?: string | null
           updated_at?: string
         }
