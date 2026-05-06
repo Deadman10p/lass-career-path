@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { ArrowLeft, Trophy, User as UserIcon, Calendar, ClipboardList } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchClusters, fetchFullQuestionnaire, fetchActiveClusterIdsForQuestionnaire } from "@/lib/api";
+import { fetchClusters, fetchFullQuestionnaire, fetchActiveClusterIdsForQuestionnaire, getProfileData } from "@/lib/api";
 import { generateInsights } from "@/lib/scoring";
 import type { CareerCluster, FullQuestionnaire } from "@/lib/types";
 import {
