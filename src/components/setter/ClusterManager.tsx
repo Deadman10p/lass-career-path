@@ -146,6 +146,7 @@ export function ClusterManager({ clusters, onChange, questionnaireId }: {
                   placeholder="Engineer, Data Scientist, Architect"
                 />
               </div>
+              <ProfileDataEditor cluster={c} onChange={(pd) => update(c.id, { profile_data: pd } as any)} />
             </div>
             <div>
               <Button size="icon" variant="ghost" onClick={() => removeClusterFromQuestionnaire(c)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
