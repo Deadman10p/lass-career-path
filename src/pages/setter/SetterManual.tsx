@@ -130,6 +130,33 @@ export default function SetterManual() {
             </ul>
           </div>
 
+          <div className="mt-3 rounded-lg bg-primary/5 p-3 text-sm border border-primary/30">
+            <strong>🆕 Dynamic <code>profile_data</code> per cluster (any labels you like):</strong>
+            <pre className="mt-2 overflow-auto rounded bg-background p-2 text-[11px]">{`{
+  "clusters": [
+    {
+      "name": "STEM",
+      "icon_emoji": "🔬",
+      "description": "Science, Technology, Engineering & Mathematics",
+      "possible_careers": ["Engineer", "Data Scientist"],
+      "profile_data": [
+        { "label": "Strengths", "content": "Logical reasoning and pattern recognition." },
+        { "label": "Weaknesses", "content": "May undervalue creative or social tasks." },
+        { "label": "Growth Tips", "content": "Pair maths practice with collaborative projects." },
+        { "label": "Famous Examples", "content": "Katherine Johnson, Alan Turing." }
+      ]
+    }
+  ],
+  "sections": [ /* … as above … */ ]
+}`}</pre>
+            <ul className="mt-2 list-disc pl-5 text-xs">
+              <li>Each cluster can carry an ordered list of <code>{`{ label, content }`}</code> cards.</li>
+              <li>Labels are <strong>completely free</strong> — Strengths/Weaknesses/Growth/Mentors/Books… whatever you want shown on the report.</li>
+              <li>The student & counsellor reports loop through every entry and render a card per label.</li>
+              <li>You can also edit these on the <strong>Clusters</strong> tab → "Metadata fields" — add/remove rows freely.</li>
+            </ul>
+          </div>
+
           <ul className="mt-3 list-disc pl-5 text-sm">
             <li><strong>XLSX:</strong> Row 1 headers <code>Section | Question | &lt;Category 1&gt; | &lt;Category 2&gt; | …</code>.</li>
             <li><strong>PDF / DOCX:</strong> AI extracts sections + questions; if a scoring grid is present the category weights are pulled too.</li>
