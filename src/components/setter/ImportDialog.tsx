@@ -408,6 +408,11 @@ function normalizeJson(data: any): ParsedDoc {
       description: c.description ?? "",
       possible_careers: Array.isArray(c.possible_careers) ? c.possible_careers : [],
       profile_attributes: (c.profile_attributes && typeof c.profile_attributes === "object") ? c.profile_attributes : {},
+      profile_data: Array.isArray(c.profile_data)
+        ? c.profile_data
+            .map((p: any) => ({ label: String(p?.label ?? "").trim(), content: String(p?.content ?? "").trim() }))
+            .filter((p: ProfileDatum) => p.label && p.content)
+        : [],
     })).filter((c: ClusterInfo) => c.name);
   };
   const extractSchema = (d: any): string[] => {
