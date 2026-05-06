@@ -212,18 +212,17 @@ export default function ResultsPage() {
         {/* ADAPTIVE PROFILE ATTRIBUTES — top cluster */}
         {(() => {
           const topCluster = ranked100[0]?.cluster;
-          const aiAttrs = insight?.by_cluster?.[topCluster?.id ?? ""] as Record<string, string> | undefined;
-          const baseAttrs = (topCluster?.profile_attributes ?? {}) as Record<string, string>;
-          const merged: Record<string, string> = { ...baseAttrs, ...(aiAttrs ?? {}) };
-          const keys = Object.keys(merged).filter(k => merged[k]);
-          if (!keys.length) return null;
+          if (!topCluster) return null;
+          const aiAttrs = insight?.by_cluster?.[topCluster.id] as Record<string, string> | undefined;
+          const data = getProfileData(topCluster, aiAttrs);
+          if (!data.length) return null;
           return (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.34, duration: 0.5 }}
               className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {keys.map(k => (
-                <div key={k} className="rounded-2xl border border-border bg-card p-5 shadow-card">
-                  <div className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{k}</div>
-                  <p className="mt-2 text-sm text-foreground/90">{merged[k]}</p>
+              {data.map((d, i) => (
+                <div key={`${d.label}-${i}`} className="rounded-2xl border border-border bg-card p-5 shadow-card">
+                  <div className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{d.label}</div>
+                  <p className="mt-2 text-sm text-foreground/90">{d.content}</p>
                 </div>
               ))}
             </motion.div>
