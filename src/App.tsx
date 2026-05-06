@@ -39,6 +39,7 @@ const App = () => (
             <Route path="/setter/results" element={<ProtectedRoute requireRole="setter"><SetterResults /></ProtectedRoute>} />
             <Route path="/setter/school-profile" element={<ProtectedRoute requireRole="setter"><SchoolProfileAnalytics /></ProtectedRoute>} />
             <Route path="/setter/response/:responseId" element={<ProtectedRoute requireRole="setter"><SetterStudentReport /></ProtectedRoute>} />
+            <Route path="/setter/student/:studentId" element={<ProtectedRoute requireRole="setter"><MasterStudentProfile /></ProtectedRoute>} />
             <Route path="/setter/questionnaire/:id/edit" element={<ProtectedRoute requireRole="setter"><QuestionnaireEditor /></ProtectedRoute>} />
             <Route path="/setter/questionnaire/:id/analytics" element={<ProtectedRoute requireRole="setter"><Analytics /></ProtectedRoute>} />
             <Route path="/setter/manual" element={<ProtectedRoute requireRole="setter"><SetterManual /></ProtectedRoute>} />
