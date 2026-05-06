@@ -62,7 +62,7 @@ export default function SetterStudentReport() {
   const ranked = useMemo(() => {
     if (!clusters.length) return [];
     const arr = clusters
-      .filter(c => activeIds.has(c.id) || (results.find(x => x.career_cluster_id === c.id)?.total_score ?? 0) > 0)
+      .filter(c => activeIds.has(c.id))
       .map(c => {
         const r = results.find(x => x.career_cluster_id === c.id);
         return { cluster: c, total: r?.total_score ?? 0, max: 0, percent: 0 };
