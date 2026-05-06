@@ -97,6 +97,8 @@ Use EXACTLY the labels listed for each cluster. Keep each entry under 240 chars,
     const weaknesses: string[] = [];
     const growth: string[] = [];
     const inventories: any[] = [];
+    /** Dynamic aggregation: { [label]: string[] } across every label the AI ever produced for this student. */
+    const dynamic: Record<string, string[]> = {};
 
     for (const r of allResp ?? []) {
       const ins = (allInsights ?? []).find((x: any) => x.response_id === r.id);
@@ -115,9 +117,15 @@ Use EXACTLY the labels listed for each cluster. Keep each entry under 240 chars,
       const byCluster = ins?.summary?.by_cluster ?? {};
       for (const cid of Object.keys(byCluster)) {
         const a = byCluster[cid] || {};
-        if (a.Strengths) strengths.push(a.Strengths);
-        if (a.Weaknesses) weaknesses.push(a.Weaknesses);
-        if (a["Growth Tips"]) growth.push(a["Growth Tips"]);
+        for (const [label, val] of Object.entries(a)) {
+          const text = String(val ?? "").trim();
+          if (!text) continue;
+          (dynamic[label] ||= []).push(text);
+          // Back-compat buckets
+          if (label === "Strengths") strengths.push(text);
+          else if (label === "Weaknesses") weaknesses.push(text);
+          else if (label === "Growth Tips") growth.push(text);
+        }
       }
     }
 
@@ -145,7 +153,7 @@ Use EXACTLY the labels listed for each cluster. Keep each entry under 240 chars,
     await sb.from("general_profiles").upsert({
       student_id: resp.student_id,
       inventories_count: inventories.length,
-      summary: { strengths, weaknesses, growth, alignments, inventories },
+      summary: { strengths, weaknesses, growth, alignments, inventories, dynamic },
     }, { onConflict: "student_id" });
 
     return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
