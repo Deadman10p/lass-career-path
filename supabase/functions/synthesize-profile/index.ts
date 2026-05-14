@@ -46,20 +46,33 @@ Deno.serve(async (req) => {
       return Array.isArray(q?.profile_schema) && q!.profile_schema!.length ? (q!.profile_schema as string[]) : ["Strengths", "Weaknesses", "Growth Tips"];
     };
 
-    const prompt = `You are a school career counsellor synthesising a personalised report.
-Questionnaire: "${q?.title}" — ${q?.description ?? ""}
+    const prompt = `You are an experienced school counsellor writing a personalised, considered profile for a student.
+The inventory is "${q?.title}"${q?.description ? ` — ${q?.description}` : ""}. Treat the inventory as it presents itself
+(it could be a personality, career interest, learning style, values, aptitude or any other kind of self-assessment).
+Do NOT assume DISC, MBTI, or any specific framework unless the inventory clearly is one. Stay neutral and adaptive.
 
-For each top cluster below, write a personalised, specific entry for EVERY label listed.
-Top clusters:
-${top3.map((r: any) => `- id=${r.cluster.id} name="${r.cluster.name}" total=${r.total_score}
+Write like someone who actually read the results and thought about them — not generic advice.
+Voice: warm, observant, second person ("you"). Specific. Slightly literary. No bullet lists, no clichés like
+"unlock your potential", no horoscope-speak, no excessive hedging. Reference the student's pattern of scores when relevant
+(e.g. a clear top, a tight cluster, a low area). Aim for "medium" depth — about 2-3 sentences per label, ~55–90 words.
+
+Top clusters and the labels you must fill for each:
+${top3.map((r: any, i: number) => `#${i + 1} id=${r.cluster.id} name="${r.cluster.name}" total=${r.total_score}
+  description=${JSON.stringify(r.cluster.description ?? "")}
   labels=${JSON.stringify(clusterLabels(r.cluster))}
   base_profile_data=${JSON.stringify(r.cluster.profile_data ?? [])}
   base_profile_attributes=${JSON.stringify(r.cluster.profile_attributes ?? {})}`).join("\n")}
 
-The student gave ${(answers ?? []).length} ratings. Return JSON of shape:
-{ "overview": "2-3 sentence personalised summary referencing the student's strongest areas",
-  "by_cluster": { "<clusterId>": { "<Label>": "personalised text" } } }
-Use EXACTLY the labels listed for each cluster. Keep each entry under 240 chars, warm and specific.`;
+The student gave ${(answers ?? []).length} ratings across the inventory.
+
+Return ONLY this JSON shape:
+{
+  "overview": "3-4 sentence personalised opening — name the dominant pattern, what it suggests about how the student moves through the world, and a small honest tension or edge to watch. ~70–110 words.",
+  "by_cluster": { "<clusterId>": { "<Label>": "personalised, observant text" } }
+}
+Use EXACTLY the labels provided per cluster. If a label is generic (e.g. "Strengths"), interpret it through this inventory's lens.
+If a label is unusual (e.g. "Communication Style", "Greatest Fear", "Famous Examples"), respect its intent literally.
+Never repeat the cluster name as filler. Never start two entries with the same word.`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -67,8 +80,8 @@ Use EXACTLY the labels listed for each cluster. Keep each entry under 240 chars,
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: "Return only valid JSON. Use the cluster ids provided as keys in by_cluster." },
-          { role: "user", content: prompt + "\n\nCluster IDs: " + top3.map((r: any) => r.cluster.id).join(", ") },
+          { role: "system", content: "You write personalised, observant student profiles. Return only valid JSON. Use the cluster ids provided as keys in by_cluster. Adapt tone to the inventory — never assume a specific framework." },
+          { role: "user", content: prompt + "\n\nCluster IDs (use exactly these as keys): " + top3.map((r: any) => r.cluster.id).join(", ") },
         ],
         response_format: { type: "json_object" },
       }),
