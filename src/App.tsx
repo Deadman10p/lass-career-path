@@ -18,6 +18,8 @@ import SetterStudentReport from "./pages/setter/SetterStudentReport.tsx";
 import SchoolProfileAnalytics from "./pages/setter/SchoolProfileAnalytics.tsx";
 import MasterStudentProfile from "./pages/setter/MasterStudentProfile.tsx";
 import StudentDashboard from "./pages/student/StudentDashboard.tsx";
+import StudentQuestionnaires from "./pages/student/StudentQuestionnaires.tsx";
+import StudentOverall from "./pages/student/StudentOverall.tsx";
 import QuestionnaireTake from "./pages/student/QuestionnaireTake.tsx";
 import ResultsPage from "./pages/student/ResultsPage.tsx";
 
@@ -45,6 +47,8 @@ const App = () => (
             <Route path="/setter/manual" element={<ProtectedRoute requireRole="setter"><SetterManual /></ProtectedRoute>} />
 
             <Route path="/student/dashboard" element={<ProtectedRoute requireRole="student"><StudentDashboard /></ProtectedRoute>} />
+            <Route path="/student/questionnaires" element={<ProtectedRoute requireRole="student"><StudentQuestionnaires /></ProtectedRoute>} />
+            <Route path="/student/overall" element={<ProtectedRoute requireRole="student"><StudentOverall /></ProtectedRoute>} />
             <Route path="/student/questionnaire/:id/take" element={<ProtectedRoute requireRole="student"><QuestionnaireTake /></ProtectedRoute>} />
             <Route path="/student/results/:responseId" element={<ProtectedRoute requireRole="student"><ResultsPage /></ProtectedRoute>} />
 

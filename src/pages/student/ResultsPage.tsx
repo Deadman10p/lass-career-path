@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import confetti from "canvas-confetti";
-import { PageShell } from "@/components/AppLayout";
+import StudentShell from "@/components/student/StudentShell";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Download, RotateCcw, ArrowLeft, Sparkles, Trophy, TrendingUp, TrendingDown } from "lucide-react";
@@ -112,10 +112,10 @@ export default function ResultsPage() {
   };
 
   if (loading) {
-    return <PageShell tone="student" title="Student Portal"><Skeleton className="h-96 w-full rounded-2xl" /></PageShell>;
+    return <StudentShell><Skeleton className="h-96 w-full rounded-2xl" /></StudentShell>;
   }
   if (!ranked.length) {
-    return <PageShell tone="student" title="Student Portal"><div className="rounded-2xl border border-border bg-card p-6 text-center">No results found.</div></PageShell>;
+    return <StudentShell><div className="rounded-2xl border border-border bg-card p-6 text-center">No results found.</div></StudentShell>;
   }
 
   const top = ranked[0];
@@ -124,7 +124,7 @@ export default function ResultsPage() {
   const radarData = ranked.map((r) => ({ cluster: r.cluster.name.length > 16 ? r.cluster.name.slice(0, 14) + "…" : r.cluster.name, value: r.percent }));
 
   return (
-    <PageShell tone="student" title="Student Portal">
+    <StudentShell>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2 print:hidden">
         <Button variant="ghost" size="sm" onClick={() => navigate("/student/dashboard")}><ArrowLeft className="mr-1 h-4 w-4" /> Dashboard</Button>
         <div className="flex gap-2">
@@ -323,6 +323,6 @@ export default function ResultsPage() {
           Generated {submittedAt ? new Date(submittedAt).toLocaleString() : ""} · {profile?.full_name} {profile?.class_name ? `· ${profile.class_name}` : ""}
         </div>
       </div>
-    </PageShell>
+    </StudentShell>
   );
 }
