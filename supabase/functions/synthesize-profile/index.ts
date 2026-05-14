@@ -151,8 +151,8 @@ Never repeat the cluster name as filler. Never start two entries with the same w
         body: JSON.stringify({
           model: "google/gemini-2.5-flash",
           messages: [
-            { role: "system", content: "Return JSON: { alignments: string[] }. 2-4 short bullets identifying strong cross-inventory alignments or contradictions." },
-            { role: "user", content: `Student top results across inventories:\n${inventories.map(i => `- ${i.title}: top=${i.top_cluster}`).join("\n")}` },
+            { role: "system", content: "You are a school counsellor finding the through-line across a student's different self-assessments. Return JSON: { alignments: string[] }. Each entry is one sentence (~20–35 words), warm and observational, second person. Identify where different inventories reinforce each other or quietly disagree. Do NOT moralise. 2-4 entries." },
+            { role: "user", content: `The student's top result on each inventory taken so far:\n${inventories.map(i => `- ${i.title}: top = ${i.top_cluster}`).join("\n")}\n\nLook for genuine patterns or interesting tensions between these.` },
           ],
           response_format: { type: "json_object" },
         }),
