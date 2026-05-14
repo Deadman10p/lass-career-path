@@ -3,7 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import confetti from "canvas-confetti";
 import StudentShell from "@/components/student/StudentShell";
-import { PageShell } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Download, RotateCcw, ArrowLeft, Sparkles, Trophy, TrendingUp, TrendingDown } from "lucide-react";
