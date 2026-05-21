@@ -529,6 +529,95 @@ async function applyAction(
       return { ok: true };
     }
 
+    if (a.type === "set_meta") {
+      const patch: any = {};
+      if (typeof a.title === "string") patch.title = a.title;
+      if (typeof a.description === "string") patch.description = a.description;
+      if (typeof a.is_published === "boolean") patch.is_published = a.is_published;
+      if (Array.isArray(a.profile_schema)) patch.profile_schema = a.profile_schema;
+      if (!Object.keys(patch).length) return { ok: false, reason: "no metadata changes" };
+      const { error } = await supabase.from("questionnaires").update(patch).eq("id", doc.id);
+      if (error) return { ok: false, reason: error.message };
+      return { ok: true };
+    }
+
+    if (a.type === "add_cluster") {
+      const name = (a.name || a.cluster_name || "").trim();
+      if (!name) return { ok: false, reason: "cluster name missing" };
+      if (findClusterId(name)) return { ok: false, reason: `cluster "${name}" already exists` };
+      const palette = ["#4F46E5","#DC2626","#0EA5E9","#10B981","#F59E0B","#8B5CF6","#EC4899"];
+      const { data: ins, error } = await supabase.from("career_clusters").insert({
+        name,
+        icon_emoji: a.icon_emoji || "✨",
+        description: a.description || "",
+        possible_careers: a.possible_careers ?? [],
+        color_hex: a.color_hex || palette[clusters.length % palette.length],
+        profile_attributes: a.profile_attributes ?? {},
+        profile_data: a.profile_data ?? [],
+        questionnaire_id: doc.id,
+      } as any).select().single();
+      if (error || !ins) return { ok: false, reason: error?.message || "insert failed" };
+      const { error: jErr } = await supabase.from("questionnaire_clusters").insert({ questionnaire_id: doc.id, career_cluster_id: ins.id });
+      if (jErr) return { ok: false, reason: jErr.message };
+      return { ok: true };
+    }
+
+    if (a.type === "edit_cluster") {
+      const cid = a.cluster_id || findClusterId(a.cluster_name);
+      if (!cid) return { ok: false, reason: `cluster not found (${a.cluster_name ?? a.cluster_id})` };
+      const patch: any = {};
+      if (a.new_name) patch.name = a.new_name;
+      if (a.icon_emoji !== undefined) patch.icon_emoji = a.icon_emoji;
+      if (a.description !== undefined) patch.description = a.description;
+      if (Array.isArray(a.possible_careers)) patch.possible_careers = a.possible_careers;
+      if (a.color_hex) patch.color_hex = a.color_hex;
+      if (a.profile_attributes && typeof a.profile_attributes === "object") patch.profile_attributes = a.profile_attributes;
+      if (Array.isArray(a.profile_data)) patch.profile_data = a.profile_data;
+      if (!Object.keys(patch).length) return { ok: false, reason: "no cluster changes" };
+      const { error } = await supabase.from("career_clusters").update(patch).eq("id", cid);
+      if (error) return { ok: false, reason: error.message };
+      return { ok: true };
+    }
+
+    if (a.type === "delete_cluster") {
+      const cid = a.cluster_id || findClusterId(a.cluster_name);
+      if (!cid) return { ok: false, reason: "cluster not found" };
+      await supabase.from("questionnaire_clusters").delete().eq("questionnaire_id", doc.id).eq("career_cluster_id", cid);
+      const { error } = await supabase.from("career_clusters").delete().eq("id", cid);
+      if (error) return { ok: false, reason: error.message };
+      return { ok: true };
+    }
+
+    if (a.type === "set_cluster_profile_datum" || a.type === "remove_cluster_profile_datum") {
+      const cid = a.cluster_id || findClusterId(a.cluster_name);
+      if (!cid) return { ok: false, reason: "cluster not found" };
+      const cluster = clusters.find(c => c.id === cid);
+      if (!cluster) return { ok: false, reason: "cluster not in snapshot" };
+      const label = (a.label || "").trim();
+      if (!label) return { ok: false, reason: "label missing" };
+      const current = Array.isArray(cluster.profile_data) ? [...cluster.profile_data] : [];
+      const idx = current.findIndex((d: any) => String(d?.label ?? "").trim().toLowerCase() === label.toLowerCase());
+      if (a.type === "remove_cluster_profile_datum") {
+        if (idx === -1) return { ok: false, reason: "label not found" };
+        current.splice(idx, 1);
+      } else {
+        const content = (a.content || "").trim();
+        if (!content) return { ok: false, reason: "content missing" };
+        if (idx === -1) current.push({ label, content });
+        else current[idx] = { label, content };
+      }
+      const { error } = await supabase.from("career_clusters").update({ profile_data: current } as any).eq("id", cid);
+      if (error) return { ok: false, reason: error.message };
+      return { ok: true };
+    }
+
+    if (a.type === "export_json") {
+      const fname = (a.filename && a.filename.trim()) || `${(doc.title || "questionnaire").replace(/[^\w.-]+/g, "-").toLowerCase()}.json`;
+      const json = buildImportJson(doc, clusters);
+      downloadJson(fname, json);
+      return { ok: true };
+    }
+
     return { ok: false, reason: `unknown action ${(a as any).type}` };
   } catch (e: any) {
     return { ok: false, reason: e?.message || "exception" };
