@@ -384,17 +384,6 @@ function describeAction(a: ProposalAction): string {
   }
 }
 
-function describeAction(a: ProposalAction): string {
-  switch (a.type) {
-    case "add_question": return `Add to “${a.section_title}”: “${a.question_statement}”`;
-    case "edit_question": return `Rewrite question: “${a.new_statement}”`;
-    case "delete_question": return `Delete a question`;
-    case "add_section": return `Add section “${a.new_section_title}”`;
-    case "edit_section": return `Rename section to “${a.new_section_title}”`;
-    case "delete_section": return `Delete a section`;
-    case "set_weight": return `Set weight for “${a.cluster_name}” = ${a.weight}`;
-  }
-}
 
 async function applyAction(
   a: ProposalAction,
