@@ -287,9 +287,21 @@ export function AIAssistantPanel({ open, onOpenChange, doc, clusters, onApplied 
 
 function serialize(doc: FullQuestionnaire, clusters: CareerCluster[]) {
   return {
+    id: doc.id,
     title: doc.title,
     description: doc.description,
-    clusters: clusters.map(c => ({ id: c.id, name: c.name, emoji: c.icon_emoji, description: c.description })),
+    is_published: doc.is_published,
+    profile_schema: (doc as any).profile_schema ?? [],
+    clusters: clusters.map(c => ({
+      id: c.id,
+      name: c.name,
+      icon_emoji: c.icon_emoji,
+      description: c.description,
+      possible_careers: c.possible_careers ?? [],
+      color_hex: c.color_hex,
+      profile_attributes: c.profile_attributes ?? {},
+      profile_data: Array.isArray(c.profile_data) ? c.profile_data : [],
+    })),
     sections: doc.sections.map(s => ({
       id: s.id,
       title: s.title,
@@ -303,6 +315,73 @@ function serialize(doc: FullQuestionnaire, clusters: CareerCluster[]) {
       })),
     })),
   };
+}
+
+function buildImportJson(doc: FullQuestionnaire, clusters: CareerCluster[]) {
+  return {
+    title: doc.title,
+    description: doc.description,
+    profile_schema: (doc as any).profile_schema ?? [],
+    clusters: clusters.map(c => ({
+      name: c.name,
+      icon_emoji: c.icon_emoji,
+      description: c.description,
+      possible_careers: c.possible_careers ?? [],
+      color_hex: c.color_hex,
+      profile_attributes: c.profile_attributes ?? {},
+      profile_data: Array.isArray(c.profile_data) ? c.profile_data : [],
+    })),
+    sections: doc.sections.map(s => ({
+      title: s.title,
+      description: s.description,
+      questions: s.questions.map(q => ({
+        statement: q.statement,
+        weights: Object.fromEntries(
+          Object.entries(q.weights)
+            .map(([cid, w]) => [clusters.find(c => c.id === cid)?.name, w])
+            .filter(([n]) => !!n) as [string, number][],
+        ),
+      })),
+    })),
+  };
+}
+
+function downloadJson(filename: string, data: unknown) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function describeAction(a: ProposalAction): string {
+  switch (a.type) {
+    case "add_question": return `Add to "${a.section_title ?? "first section"}": "${a.question_statement}"`;
+    case "edit_question": return `Rewrite question: "${a.new_statement}"`;
+    case "delete_question": return `Delete a question`;
+    case "add_section": return `Add section "${a.new_section_title}"`;
+    case "edit_section": return `Edit section "${a.new_section_title ?? a.section_id}"`;
+    case "delete_section": return `Delete a section`;
+    case "set_weight": return `Set weight for "${a.cluster_name}" = ${a.weight}`;
+    case "set_meta": {
+      const bits = [];
+      if (a.title) bits.push(`title → "${a.title}"`);
+      if (a.description !== undefined) bits.push(`description updated`);
+      if (typeof a.is_published === "boolean") bits.push(a.is_published ? "publish" : "unpublish");
+      if (a.profile_schema) bits.push(`profile schema (${a.profile_schema.length} fields)`);
+      return `Update questionnaire: ${bits.join(", ") || "metadata"}`;
+    }
+    case "add_cluster": return `Add cluster "${a.name ?? a.cluster_name}" ${a.icon_emoji ?? ""}`.trim();
+    case "edit_cluster": return `Edit cluster "${a.cluster_name ?? a.cluster_id}"${a.new_name ? ` → "${a.new_name}"` : ""}`;
+    case "delete_cluster": return `Delete cluster "${a.cluster_name ?? a.cluster_id}"`;
+    case "set_cluster_profile_datum": return `Set "${a.label}" on cluster "${a.cluster_name}"`;
+    case "remove_cluster_profile_datum": return `Remove "${a.label}" from cluster "${a.cluster_name}"`;
+    case "export_json": return `Download import-ready JSON${a.filename ? ` (${a.filename})` : ""}`;
+  }
 }
 
 function describeAction(a: ProposalAction): string {
