@@ -17,7 +17,13 @@ interface Msg {
 }
 
 interface ProposalAction {
-  type: "add_question" | "edit_question" | "delete_question" | "add_section" | "edit_section" | "delete_section" | "set_weight";
+  type:
+    | "add_question" | "edit_question" | "delete_question"
+    | "add_section" | "edit_section" | "delete_section"
+    | "set_weight" | "set_meta"
+    | "add_cluster" | "edit_cluster" | "delete_cluster"
+    | "set_cluster_profile_datum" | "remove_cluster_profile_datum"
+    | "export_json";
   section_title?: string;
   section_id?: string;
   question_id?: string;
@@ -26,7 +32,27 @@ interface ProposalAction {
   new_section_title?: string;
   new_section_description?: string;
   cluster_name?: string;
+  name?: string;
+  cluster_id?: string;
+  new_name?: string;
   weight?: number;
+  weights?: Record<string, number>;
+  // meta
+  title?: string;
+  description?: string;
+  is_published?: boolean;
+  profile_schema?: string[];
+  // cluster fields
+  icon_emoji?: string;
+  possible_careers?: string[];
+  color_hex?: string;
+  profile_attributes?: Record<string, string>;
+  profile_data?: { label: string; content: string }[];
+  // profile datum
+  label?: string;
+  content?: string;
+  // export
+  filename?: string;
 }
 
 interface Proposal {
@@ -262,9 +288,21 @@ export function AIAssistantPanel({ open, onOpenChange, doc, clusters, onApplied 
 
 function serialize(doc: FullQuestionnaire, clusters: CareerCluster[]) {
   return {
+    id: doc.id,
     title: doc.title,
     description: doc.description,
-    clusters: clusters.map(c => ({ id: c.id, name: c.name, emoji: c.icon_emoji, description: c.description })),
+    is_published: doc.is_published,
+    profile_schema: (doc as any).profile_schema ?? [],
+    clusters: clusters.map(c => ({
+      id: c.id,
+      name: c.name,
+      icon_emoji: c.icon_emoji,
+      description: c.description,
+      possible_careers: c.possible_careers ?? [],
+      color_hex: c.color_hex,
+      profile_attributes: c.profile_attributes ?? {},
+      profile_data: Array.isArray(c.profile_data) ? c.profile_data : [],
+    })),
     sections: doc.sections.map(s => ({
       id: s.id,
       title: s.title,
@@ -280,17 +318,73 @@ function serialize(doc: FullQuestionnaire, clusters: CareerCluster[]) {
   };
 }
 
+function buildImportJson(doc: FullQuestionnaire, clusters: CareerCluster[]) {
+  return {
+    title: doc.title,
+    description: doc.description,
+    profile_schema: (doc as any).profile_schema ?? [],
+    clusters: clusters.map(c => ({
+      name: c.name,
+      icon_emoji: c.icon_emoji,
+      description: c.description,
+      possible_careers: c.possible_careers ?? [],
+      color_hex: c.color_hex,
+      profile_attributes: c.profile_attributes ?? {},
+      profile_data: Array.isArray(c.profile_data) ? c.profile_data : [],
+    })),
+    sections: doc.sections.map(s => ({
+      title: s.title,
+      description: s.description,
+      questions: s.questions.map(q => ({
+        statement: q.statement,
+        weights: Object.fromEntries(
+          Object.entries(q.weights)
+            .map(([cid, w]) => [clusters.find(c => c.id === cid)?.name, w])
+            .filter(([n]) => !!n) as [string, number][],
+        ),
+      })),
+    })),
+  };
+}
+
+function downloadJson(filename: string, data: unknown) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function describeAction(a: ProposalAction): string {
   switch (a.type) {
-    case "add_question": return `Add to “${a.section_title}”: “${a.question_statement}”`;
-    case "edit_question": return `Rewrite question: “${a.new_statement}”`;
+    case "add_question": return `Add to "${a.section_title ?? "first section"}": "${a.question_statement}"`;
+    case "edit_question": return `Rewrite question: "${a.new_statement}"`;
     case "delete_question": return `Delete a question`;
-    case "add_section": return `Add section “${a.new_section_title}”`;
-    case "edit_section": return `Rename section to “${a.new_section_title}”`;
+    case "add_section": return `Add section "${a.new_section_title}"`;
+    case "edit_section": return `Edit section "${a.new_section_title ?? a.section_id}"`;
     case "delete_section": return `Delete a section`;
-    case "set_weight": return `Set weight for “${a.cluster_name}” = ${a.weight}`;
+    case "set_weight": return `Set weight for "${a.cluster_name}" = ${a.weight}`;
+    case "set_meta": {
+      const bits = [];
+      if (a.title) bits.push(`title → "${a.title}"`);
+      if (a.description !== undefined) bits.push(`description updated`);
+      if (typeof a.is_published === "boolean") bits.push(a.is_published ? "publish" : "unpublish");
+      if (a.profile_schema) bits.push(`profile schema (${a.profile_schema.length} fields)`);
+      return `Update questionnaire: ${bits.join(", ") || "metadata"}`;
+    }
+    case "add_cluster": return `Add cluster "${a.name ?? a.cluster_name}" ${a.icon_emoji ?? ""}`.trim();
+    case "edit_cluster": return `Edit cluster "${a.cluster_name ?? a.cluster_id}"${a.new_name ? ` → "${a.new_name}"` : ""}`;
+    case "delete_cluster": return `Delete cluster "${a.cluster_name ?? a.cluster_id}"`;
+    case "set_cluster_profile_datum": return `Set "${a.label}" on cluster "${a.cluster_name}"`;
+    case "remove_cluster_profile_datum": return `Remove "${a.label}" from cluster "${a.cluster_name}"`;
+    case "export_json": return `Download import-ready JSON${a.filename ? ` (${a.filename})` : ""}`;
   }
 }
+
 
 async function applyAction(
   a: ProposalAction,
@@ -388,12 +482,19 @@ async function applyAction(
         }
       }
       const order = sec!.questions?.length ?? 0;
-      const { error } = await supabase.from("questions").insert({
+      const { data: qIns, error } = await supabase.from("questions").insert({
         section_id: sec!.id,
         statement: a.question_statement || a.new_statement || "",
         order_index: order,
-      });
+      }).select().single();
       if (error) return { ok: false, reason: error.message };
+      // Optional weights bundled with the question
+      if (qIns && a.weights && typeof a.weights === "object") {
+        const rows = Object.entries(a.weights)
+          .map(([name, w]) => ({ question_id: qIns.id, career_cluster_id: findClusterId(name), weight: Math.max(0, Math.min(5, Math.round(Number(w)))) }))
+          .filter(r => r.career_cluster_id && Number.isFinite(r.weight)) as any[];
+        if (rows.length) await supabase.from("answer_weights").upsert(rows, { onConflict: "question_id,career_cluster_id" });
+      }
       return { ok: true };
     }
 
@@ -425,6 +526,95 @@ async function applyAction(
         { onConflict: "question_id,career_cluster_id" },
       );
       if (error) return { ok: false, reason: error.message };
+      return { ok: true };
+    }
+
+    if (a.type === "set_meta") {
+      const patch: any = {};
+      if (typeof a.title === "string") patch.title = a.title;
+      if (typeof a.description === "string") patch.description = a.description;
+      if (typeof a.is_published === "boolean") patch.is_published = a.is_published;
+      if (Array.isArray(a.profile_schema)) patch.profile_schema = a.profile_schema;
+      if (!Object.keys(patch).length) return { ok: false, reason: "no metadata changes" };
+      const { error } = await supabase.from("questionnaires").update(patch).eq("id", doc.id);
+      if (error) return { ok: false, reason: error.message };
+      return { ok: true };
+    }
+
+    if (a.type === "add_cluster") {
+      const name = (a.name || a.cluster_name || "").trim();
+      if (!name) return { ok: false, reason: "cluster name missing" };
+      if (findClusterId(name)) return { ok: false, reason: `cluster "${name}" already exists` };
+      const palette = ["#4F46E5","#DC2626","#0EA5E9","#10B981","#F59E0B","#8B5CF6","#EC4899"];
+      const { data: ins, error } = await supabase.from("career_clusters").insert({
+        name,
+        icon_emoji: a.icon_emoji || "✨",
+        description: a.description || "",
+        possible_careers: a.possible_careers ?? [],
+        color_hex: a.color_hex || palette[clusters.length % palette.length],
+        profile_attributes: a.profile_attributes ?? {},
+        profile_data: a.profile_data ?? [],
+        questionnaire_id: doc.id,
+      } as any).select().single();
+      if (error || !ins) return { ok: false, reason: error?.message || "insert failed" };
+      const { error: jErr } = await supabase.from("questionnaire_clusters").insert({ questionnaire_id: doc.id, career_cluster_id: ins.id });
+      if (jErr) return { ok: false, reason: jErr.message };
+      return { ok: true };
+    }
+
+    if (a.type === "edit_cluster") {
+      const cid = a.cluster_id || findClusterId(a.cluster_name);
+      if (!cid) return { ok: false, reason: `cluster not found (${a.cluster_name ?? a.cluster_id})` };
+      const patch: any = {};
+      if (a.new_name) patch.name = a.new_name;
+      if (a.icon_emoji !== undefined) patch.icon_emoji = a.icon_emoji;
+      if (a.description !== undefined) patch.description = a.description;
+      if (Array.isArray(a.possible_careers)) patch.possible_careers = a.possible_careers;
+      if (a.color_hex) patch.color_hex = a.color_hex;
+      if (a.profile_attributes && typeof a.profile_attributes === "object") patch.profile_attributes = a.profile_attributes;
+      if (Array.isArray(a.profile_data)) patch.profile_data = a.profile_data;
+      if (!Object.keys(patch).length) return { ok: false, reason: "no cluster changes" };
+      const { error } = await supabase.from("career_clusters").update(patch).eq("id", cid);
+      if (error) return { ok: false, reason: error.message };
+      return { ok: true };
+    }
+
+    if (a.type === "delete_cluster") {
+      const cid = a.cluster_id || findClusterId(a.cluster_name);
+      if (!cid) return { ok: false, reason: "cluster not found" };
+      await supabase.from("questionnaire_clusters").delete().eq("questionnaire_id", doc.id).eq("career_cluster_id", cid);
+      const { error } = await supabase.from("career_clusters").delete().eq("id", cid);
+      if (error) return { ok: false, reason: error.message };
+      return { ok: true };
+    }
+
+    if (a.type === "set_cluster_profile_datum" || a.type === "remove_cluster_profile_datum") {
+      const cid = a.cluster_id || findClusterId(a.cluster_name);
+      if (!cid) return { ok: false, reason: "cluster not found" };
+      const cluster = clusters.find(c => c.id === cid);
+      if (!cluster) return { ok: false, reason: "cluster not in snapshot" };
+      const label = (a.label || "").trim();
+      if (!label) return { ok: false, reason: "label missing" };
+      const current = Array.isArray(cluster.profile_data) ? [...cluster.profile_data] : [];
+      const idx = current.findIndex((d: any) => String(d?.label ?? "").trim().toLowerCase() === label.toLowerCase());
+      if (a.type === "remove_cluster_profile_datum") {
+        if (idx === -1) return { ok: false, reason: "label not found" };
+        current.splice(idx, 1);
+      } else {
+        const content = (a.content || "").trim();
+        if (!content) return { ok: false, reason: "content missing" };
+        if (idx === -1) current.push({ label, content });
+        else current[idx] = { label, content };
+      }
+      const { error } = await supabase.from("career_clusters").update({ profile_data: current } as any).eq("id", cid);
+      if (error) return { ok: false, reason: error.message };
+      return { ok: true };
+    }
+
+    if (a.type === "export_json") {
+      const fname = (a.filename && a.filename.trim()) || `${(doc.title || "questionnaire").replace(/[^\w.-]+/g, "-").toLowerCase()}.json`;
+      const json = buildImportJson(doc, clusters);
+      downloadJson(fname, json);
       return { ok: true };
     }
 
