@@ -172,12 +172,44 @@ export default function SetterManual() {
           </div>
         </Section>
 
-        <Section icon={<MessageSquare className="h-5 w-5" />} title="6. AI Assistant — open chat, persistent memory, propose-then-confirm">
-          Click <strong>AI Assistant</strong> for a free-form chat partner. Ask for opinions, analysis, brainstorming, or actual edits (it shows <em>Proposed changes</em> you must Apply or Reject).
+        <Section icon={<MessageSquare className="h-5 w-5" />} title="6. AI Assistant — full-control co-pilot, JSON export, propose-then-confirm">
+          Click <strong>AI Assistant</strong> for a free-form chat partner. Ask for opinions, analysis, brainstorming, or actual edits — it shows <em>Proposed changes</em> you must Apply or Reject.
           <div className="mt-3 rounded-lg border border-setter/30 bg-setter/5 p-3 text-sm space-y-1">
             <div><strong>🧠 Memory:</strong> remembered per questionnaire across sessions; older turns are auto-summarised.</div>
-            <div><strong>🔄 Always fresh:</strong> the assistant gets a new snapshot after every Apply.</div>
+            <div><strong>🔄 Always fresh:</strong> the assistant receives a new snapshot after every Apply.</div>
             <div><strong>Reset memory</strong> wipes both the chat and the summary for this questionnaire.</div>
+          </div>
+
+          <div className="mt-3 rounded-lg bg-accent p-3 text-sm space-y-1">
+            <strong>Full edit coverage — the assistant can modify any part of the questionnaire from a plain-English description:</strong>
+            <ul className="mt-1 list-disc pl-5 text-xs space-y-0.5">
+              <li><strong>Metadata:</strong> rename the questionnaire, rewrite the description, publish/unpublish, update the profile schema.</li>
+              <li><strong>Sections:</strong> add, rename, change description, or delete.</li>
+              <li><strong>Questions:</strong> add (optionally with weights in one go), rewrite, or delete — describe what you want and it finds the question.</li>
+              <li><strong>Weights:</strong> set/change the weight of any question for any cluster.</li>
+              <li><strong>Clusters:</strong> add a brand-new cluster with emoji, description, color and careers; edit any field of an existing cluster; delete a cluster (also removes its weights).</li>
+              <li><strong>Profile cards (<code>profile_data</code>):</strong> add/replace or remove any labelled card on any cluster — "Set Strengths on STEM to …", "Remove the Famous Examples card from Healthcare".</li>
+            </ul>
+          </div>
+
+          <div className="mt-3 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm space-y-1">
+            <strong>🆕 JSON export → ready for Bulk Import:</strong> ask the assistant something like
+            <em> "export this questionnaire as a JSON file"</em> or <em>"download an import-ready JSON"</em>.
+            It proposes an <code>export_json</code> action; on Apply, your browser downloads a JSON file that follows the exact schema expected by the
+            <strong> Bulk Import</strong> dialog (sections, questions, weights, clusters with all metadata, <code>profile_schema</code>). Re-import it on any
+            other questionnaire to clone the whole structure.
+          </div>
+
+          <div className="mt-3 rounded-lg bg-accent p-3 text-sm">
+            <strong>Example prompts:</strong>
+            <ul className="mt-1 list-disc pl-5 text-xs space-y-0.5">
+              <li><em>"Add a new section called 'Values' with three first-person statements about teamwork."</em></li>
+              <li><em>"Rewrite the question about helping people to be more concrete."</em></li>
+              <li><em>"Create a cluster called 'Creative Arts' with a 🎨 emoji and three careers."</em></li>
+              <li><em>"Set the Strengths card on the Healthcare cluster to 'Empathetic and observant under pressure.'"</em></li>
+              <li><em>"Set weight 4 on the maths question for the STEM cluster."</em></li>
+              <li><em>"Export this whole questionnaire as JSON I can re-import."</em></li>
+            </ul>
           </div>
         </Section>
 
