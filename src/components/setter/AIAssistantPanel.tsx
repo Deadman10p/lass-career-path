@@ -17,7 +17,13 @@ interface Msg {
 }
 
 interface ProposalAction {
-  type: "add_question" | "edit_question" | "delete_question" | "add_section" | "edit_section" | "delete_section" | "set_weight";
+  type:
+    | "add_question" | "edit_question" | "delete_question"
+    | "add_section" | "edit_section" | "delete_section"
+    | "set_weight" | "set_meta"
+    | "add_cluster" | "edit_cluster" | "delete_cluster"
+    | "set_cluster_profile_datum" | "remove_cluster_profile_datum"
+    | "export_json";
   section_title?: string;
   section_id?: string;
   question_id?: string;
@@ -26,7 +32,26 @@ interface ProposalAction {
   new_section_title?: string;
   new_section_description?: string;
   cluster_name?: string;
+  cluster_id?: string;
+  new_name?: string;
   weight?: number;
+  weights?: Record<string, number>;
+  // meta
+  title?: string;
+  description?: string;
+  is_published?: boolean;
+  profile_schema?: string[];
+  // cluster fields
+  icon_emoji?: string;
+  possible_careers?: string[];
+  color_hex?: string;
+  profile_attributes?: Record<string, string>;
+  profile_data?: { label: string; content: string }[];
+  // profile datum
+  label?: string;
+  content?: string;
+  // export
+  filename?: string;
 }
 
 interface Proposal {
