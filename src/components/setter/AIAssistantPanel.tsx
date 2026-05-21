@@ -482,12 +482,19 @@ async function applyAction(
         }
       }
       const order = sec!.questions?.length ?? 0;
-      const { error } = await supabase.from("questions").insert({
+      const { data: qIns, error } = await supabase.from("questions").insert({
         section_id: sec!.id,
         statement: a.question_statement || a.new_statement || "",
         order_index: order,
-      });
+      }).select().single();
       if (error) return { ok: false, reason: error.message };
+      // Optional weights bundled with the question
+      if (qIns && a.weights && typeof a.weights === "object") {
+        const rows = Object.entries(a.weights)
+          .map(([name, w]) => ({ question_id: qIns.id, career_cluster_id: findClusterId(name), weight: Math.max(0, Math.min(5, Math.round(Number(w)))) }))
+          .filter(r => r.career_cluster_id && Number.isFinite(r.weight)) as any[];
+        if (rows.length) await supabase.from("answer_weights").upsert(rows, { onConflict: "question_id,career_cluster_id" });
+      }
       return { ok: true };
     }
 
