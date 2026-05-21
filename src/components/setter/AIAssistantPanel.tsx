@@ -32,6 +32,7 @@ interface ProposalAction {
   new_section_title?: string;
   new_section_description?: string;
   cluster_name?: string;
+  name?: string;
   cluster_id?: string;
   new_name?: string;
   weight?: number;
