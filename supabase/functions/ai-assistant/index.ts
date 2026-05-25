@@ -53,12 +53,27 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { message, history = [], questionnaire, memory_summary, mode } = await req.json();
+    const { message, history = [], questionnaire, memory_summary, mode, attachments = [] } = await req.json();
     if (!message || !questionnaire) {
       return new Response(JSON.stringify({ error: "missing fields" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const isSummarise = mode === "summarise";
+
+    // Build multimodal user content if attachments are present.
+    // attachments: [{ name, mime, kind: "image"|"pdf"|"html"|"text", dataUrl?: string, text?: string }]
+    const userParts: any[] = [{ type: "text", text: message }];
+    for (const a of (attachments || []).slice(0, 6)) {
+      try {
+        if ((a.kind === "image" || a.kind === "pdf") && a.dataUrl) {
+          userParts.push({ type: "image_url", image_url: { url: a.dataUrl } });
+          userParts.push({ type: "text", text: `↑ attached ${a.kind.toUpperCase()} file: ${a.name || "(file)"}` });
+        } else if ((a.kind === "html" || a.kind === "text") && typeof a.text === "string") {
+          const snippet = a.text.length > 60000 ? a.text.slice(0, 60000) + "\n…(truncated)" : a.text;
+          userParts.push({ type: "text", text: `Attached ${a.kind.toUpperCase()} file "${a.name || "(file)"}":\n\n\`\`\`${a.kind}\n${snippet}\n\`\`\`` });
+        }
+      } catch { /* ignore one bad attachment */ }
+    }
 
     const messages: any[] = isSummarise
       ? [
@@ -70,7 +85,7 @@ Deno.serve(async (req) => {
           { role: "system", content: "Current questionnaire (use these EXACT IDs when proposing edits — this snapshot is always the latest after any prior applied changes):\n" + JSON.stringify(questionnaire) },
           ...(memory_summary ? [{ role: "system", content: `Long-term memory of this conversation so far:\n${memory_summary}` }] : []),
           ...history.slice(-12),
-          { role: "user", content: message },
+          { role: "user", content: userParts.length === 1 ? message : userParts },
         ];
 
     const body: any = {
