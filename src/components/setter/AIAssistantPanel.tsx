@@ -765,6 +765,23 @@ async function applyAction(
       return { ok: true };
     }
 
+    if (a.type === "set_report_style") {
+      if (!a.report_style || typeof a.report_style !== "object") return { ok: false, reason: "report_style missing" };
+      // Merge with whatever is already saved so partial proposals don't wipe other keys.
+      const current = ((doc as any).report_style ?? {}) as Record<string, any>;
+      const merged = { ...current, ...a.report_style };
+      const { error } = await supabase.from("questionnaires").update({ report_style: merged } as any).eq("id", doc.id);
+      if (error) return { ok: false, reason: error.message };
+      return { ok: true };
+    }
+
+    if (a.type === "set_synthesis_style") {
+      if (typeof a.synthesis_style !== "string") return { ok: false, reason: "synthesis_style missing" };
+      const { error } = await supabase.from("questionnaires").update({ synthesis_style: a.synthesis_style } as any).eq("id", doc.id);
+      if (error) return { ok: false, reason: error.message };
+      return { ok: true };
+    }
+
     return { ok: false, reason: `unknown action ${(a as any).type}` };
   } catch (e: any) {
     return { ok: false, reason: e?.message || "exception" };
