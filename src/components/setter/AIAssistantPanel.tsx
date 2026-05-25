@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, Send, Loader2, Check, X, Bot, User as UserIcon, Brain, Trash2 } from "lucide-react";
+import { Sparkles, Send, Loader2, Check, X, Bot, User as UserIcon, Brain, Trash2, Paperclip, ChevronDown, FileText, Image as ImageIcon, FileCode } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import type { CareerCluster, FullQuestionnaire } from "@/lib/types";
+import type { CareerCluster, FullQuestionnaire, ReportStyle } from "@/lib/types";
 import ReactMarkdown from "react-markdown";
 
 interface Msg {
