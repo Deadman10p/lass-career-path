@@ -31,15 +31,21 @@ A proposal action is one of:
 - { "type": "add_cluster", "name": "...", "icon_emoji"?: "🔬", "description"?: "...", "possible_careers"?: ["..."], "color_hex"?: "#4F46E5", "profile_data"?: [{ "label": "Strengths", "content": "..." }], "profile_attributes"?: { "key": "value" } }
 - { "type": "edit_cluster", "cluster_id"?: "<uuid>", "cluster_name"?: "<existing name>", "new_name"?: "...", "icon_emoji"?: "...", "description"?: "...", "possible_careers"?: ["..."], "color_hex"?: "...", "profile_attributes"?: { ... } }
 - { "type": "delete_cluster", "cluster_id"?: "<uuid>", "cluster_name"?: "..." }
-- { "type": "set_cluster_profile_datum", "cluster_name": "...", "label": "Strengths", "content": "..." }   // adds or replaces a single profile_data card
+- { "type": "set_cluster_profile_datum", "cluster_name": "...", "label": "Strengths", "content": "..." }
 - { "type": "remove_cluster_profile_datum", "cluster_name": "...", "label": "Strengths" }
-- { "type": "export_json", "filename"?: "my-inventory.json" }   // bundles the entire questionnaire (sections, questions, weights, clusters with all metadata, profile_schema) into a file the user can download and re-import via Bulk Import
+- { "type": "export_json", "filename"?: "my-inventory.json" }
+- { "type": "set_report_style", "report_style": { "accent"?: "#4F46E5", "heroBg"?: "linear-gradient(135deg,#0f172a,#1e293b)", "heroTextColor"?: "#ffffff", "fontDisplay"?: "'Playfair Display', serif", "fontBody"?: "'DM Sans', sans-serif", "cardRadius"?: "1.5rem", "heroRadius"?: "28px", "tone"?: "warm|cool|editorial|minimal|vivid", "customCss"?: ".lass-report-skin .lass-bar-fill { ... }" } }
+   // ↑ Updates the look of BOTH the student Results page AND the counsellor's Individual Report. customCss is scoped to .lass-report-skin so it only affects the report surfaces.
+   // When the user attaches an HTML mockup or screenshot, derive concrete values from it and propose them here.
+- { "type": "set_synthesis_style", "synthesis_style": "Plain-English guidance on tone, vocabulary, length, methodology, what to emphasise or avoid when the AI writes the student's profile. Free text, up to ~600 words." }
+   // ↑ Updates how the synthesis AI writes the final profile output (wording, methodology, voice, framing).
 
 Rules:
 - Use EXACT IDs from the provided snapshot when referencing existing items.
 - Statements: concise (<25 words), first-person Likert phrasing.
 - Cluster names must match one of the provided cluster names exactly (or, for add_cluster, be a new name).
 - Weights are integers 0..5 in this app, but interpret the user's described scale and clamp.
+- When the user attaches HTML, an image, or a PDF: read it carefully. If it shows a desired report look, propose set_report_style. If it describes wording/voice for the output, propose set_synthesis_style. If it contains questionnaire content, propose add_question/add_section/add_cluster actions.
 
 If the teacher just chats, set "proposal" to null.`;
 
