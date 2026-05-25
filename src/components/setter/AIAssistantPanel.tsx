@@ -83,7 +83,10 @@ export function AIAssistantPanel({ open, onOpenChange, doc, clusters, onApplied 
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [atBottom, setAtBottom] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Persisted memory: load when panel opens / questionnaire changes
   useEffect(() => {
