@@ -524,6 +524,11 @@ function describeAction(a: ProposalAction): string {
     case "set_cluster_profile_datum": return `Set "${a.label}" on cluster "${a.cluster_name}"`;
     case "remove_cluster_profile_datum": return `Remove "${a.label}" from cluster "${a.cluster_name}"`;
     case "export_json": return `Download import-ready JSON${a.filename ? ` (${a.filename})` : ""}`;
+    case "set_report_style": {
+      const keys = a.report_style ? Object.keys(a.report_style) : [];
+      return `Restyle report UI (${keys.length ? keys.join(", ") : "preset"})`;
+    }
+    case "set_synthesis_style": return `Update profile-writing style (${(a.synthesis_style || "").length} chars of guidance)`;
   }
 }
 
