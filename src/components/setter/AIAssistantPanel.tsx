@@ -116,7 +116,38 @@ export function AIAssistantPanel({ open, onOpenChange, doc, clusters, onApplied 
     } catch {}
   }, [msgs, memorySummary, doc?.id]);
 
-  useEffect(() => { scrollRef.current?.scrollTo({ top: 99999, behavior: "smooth" }); }, [msgs]);
+  // ── Smart auto-scroll: only auto-follow when the user is already near the bottom.
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const near = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+      setAtBottom(near);
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [open]);
+
+  // Auto-scroll on new messages only if user is at bottom; also observe layout growth (e.g. proposals expanding).
+  useEffect(() => {
+    if (atBottom) scrollToBottom("smooth");
+  }, [msgs, sending, atBottom, scrollToBottom]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => { if (atBottom) scrollToBottom("auto"); });
+    ro.observe(el);
+    Array.from(el.children).forEach(c => ro.observe(c as Element));
+    return () => ro.disconnect();
+  }, [atBottom, scrollToBottom, msgs.length]);
 
   // Always serialize the *current* (refreshed) doc so memory of the questionnaire is never stale
   const liveSnapshot = useMemo(() => serialize(doc, clusters), [doc, clusters]);
