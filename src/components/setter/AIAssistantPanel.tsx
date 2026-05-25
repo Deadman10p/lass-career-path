@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, Send, Loader2, Check, X, Bot, User as UserIcon, Brain, Trash2 } from "lucide-react";
+import { Sparkles, Send, Loader2, Check, X, Bot, User as UserIcon, Brain, Trash2, Paperclip, ChevronDown, FileText, Image as ImageIcon, FileCode } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import type { CareerCluster, FullQuestionnaire } from "@/lib/types";
+import type { CareerCluster, FullQuestionnaire, ReportStyle } from "@/lib/types";
 import ReactMarkdown from "react-markdown";
 
 interface Msg {
@@ -23,7 +22,8 @@ interface ProposalAction {
     | "set_weight" | "set_meta"
     | "add_cluster" | "edit_cluster" | "delete_cluster"
     | "set_cluster_profile_datum" | "remove_cluster_profile_datum"
-    | "export_json";
+    | "export_json"
+    | "set_report_style" | "set_synthesis_style";
   section_title?: string;
   section_id?: string;
   question_id?: string;
@@ -53,11 +53,22 @@ interface ProposalAction {
   content?: string;
   // export
   filename?: string;
+  // report style / synthesis style
+  report_style?: ReportStyle;
+  synthesis_style?: string;
 }
 
 interface Proposal {
   summary: string;
   actions: ProposalAction[];
+}
+
+interface Attachment {
+  name: string;
+  mime: string;
+  kind: "image" | "pdf" | "html" | "text";
+  dataUrl?: string;
+  text?: string;
 }
 
 const HISTORY_KEEP = 10;          // keep last N raw turns verbatim
@@ -72,7 +83,10 @@ export function AIAssistantPanel({ open, onOpenChange, doc, clusters, onApplied 
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [atBottom, setAtBottom] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Persisted memory: load when panel opens / questionnaire changes
   useEffect(() => {
@@ -102,7 +116,38 @@ export function AIAssistantPanel({ open, onOpenChange, doc, clusters, onApplied 
     } catch {}
   }, [msgs, memorySummary, doc?.id]);
 
-  useEffect(() => { scrollRef.current?.scrollTo({ top: 99999, behavior: "smooth" }); }, [msgs]);
+  // ── Smart auto-scroll: only auto-follow when the user is already near the bottom.
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const near = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+      setAtBottom(near);
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [open]);
+
+  // Auto-scroll on new messages only if user is at bottom; also observe layout growth (e.g. proposals expanding).
+  useEffect(() => {
+    if (atBottom) scrollToBottom("smooth");
+  }, [msgs, sending, atBottom, scrollToBottom]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => { if (atBottom) scrollToBottom("auto"); });
+    ro.observe(el);
+    Array.from(el.children).forEach(c => ro.observe(c as Element));
+    return () => ro.disconnect();
+  }, [atBottom, scrollToBottom, msgs.length]);
 
   // Always serialize the *current* (refreshed) doc so memory of the questionnaire is never stale
   const liveSnapshot = useMemo(() => serialize(doc, clusters), [doc, clusters]);
@@ -142,12 +187,18 @@ export function AIAssistantPanel({ open, onOpenChange, doc, clusters, onApplied 
   };
 
   const send = async () => {
-    if (!input.trim() || sending) return;
-    const userMsg = input.trim();
+    if ((!input.trim() && !attachments.length) || sending) return;
+    const userMsg = input.trim() || "(see attached file)";
+    const attached = attachments;
     setInput("");
-    const next = [...msgs, { role: "user" as const, content: userMsg }];
+    setAttachments([]);
+    const attachNote = attached.length
+      ? "\n\n" + attached.map(a => `📎 *${a.kind.toUpperCase()}* — ${a.name}`).join("\n")
+      : "";
+    const next = [...msgs, { role: "user" as const, content: userMsg + attachNote }];
     setMsgs(next);
     setSending(true);
+    setAtBottom(true);
     try {
       const { data, error } = await supabase.functions.invoke("ai-assistant", {
         body: {
@@ -155,6 +206,7 @@ export function AIAssistantPanel({ open, onOpenChange, doc, clusters, onApplied 
           history: buildHistoryForApi(),
           questionnaire: liveSnapshot,
           memory_summary: memorySummary || undefined,
+          attachments: attached,
         },
       });
       if (error) throw error;
@@ -167,6 +219,36 @@ export function AIAssistantPanel({ open, onOpenChange, doc, clusters, onApplied 
     } finally {
       setSending(false);
     }
+  };
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || !files.length) return;
+    const next: Attachment[] = [];
+    for (const file of Array.from(files).slice(0, 4)) {
+      if (file.size > 12 * 1024 * 1024) { toast.error(`"${file.name}" is over 12MB`); continue; }
+      const mime = file.type || "";
+      const lower = file.name.toLowerCase();
+      try {
+        if (mime.startsWith("image/")) {
+          const dataUrl = await fileToDataUrl(file);
+          next.push({ name: file.name, mime, kind: "image", dataUrl });
+        } else if (mime === "application/pdf" || lower.endsWith(".pdf")) {
+          const dataUrl = await fileToDataUrl(file);
+          next.push({ name: file.name, mime: "application/pdf", kind: "pdf", dataUrl });
+        } else if (mime === "text/html" || lower.endsWith(".html") || lower.endsWith(".htm")) {
+          const text = await file.text();
+          next.push({ name: file.name, mime: "text/html", kind: "html", text });
+        } else if (mime.startsWith("text/") || lower.endsWith(".txt") || lower.endsWith(".md") || lower.endsWith(".css") || lower.endsWith(".json")) {
+          const text = await file.text();
+          next.push({ name: file.name, mime: mime || "text/plain", kind: "text", text });
+        } else {
+          toast.error(`"${file.name}" — unsupported type (HTML, image, PDF, text only)`);
+        }
+      } catch (e: any) {
+        toast.error(`Could not read "${file.name}": ${e?.message ?? e}`);
+      }
+    }
+    if (next.length) setAttachments(a => [...a, ...next]);
   };
 
   const apply = async (proposal: Proposal, idx: number) => {
@@ -236,47 +318,96 @@ export function AIAssistantPanel({ open, onOpenChange, doc, clusters, onApplied 
             </div>
           )}
         </SheetHeader>
-        <ScrollArea className="flex-1" ref={scrollRef as any}>
-          <div className="space-y-4 p-4">
-            {msgs.filter(m => !m.hidden).map((m, i) => (
-              <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
-                <div className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-sm ${m.role === "user" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
-                  <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider opacity-70">
-                    {m.role === "user" ? <UserIcon className="h-3 w-3" /> : <Bot className="h-3 w-3" />} {m.role === "user" ? "You" : "Assistant"}
-                  </div>
-                  <div className="prose prose-sm max-w-none [&_p]:my-1"><ReactMarkdown>{m.content}</ReactMarkdown></div>
-                  {m.proposal && (
-                    <div className="mt-3 rounded-lg border border-setter/40 bg-card p-3 text-foreground">
-                      <div className="mb-2 text-xs font-semibold text-setter">Proposed changes</div>
-                      <div className="mb-2 text-sm">{m.proposal.summary}</div>
-                      <ul className="mb-3 space-y-1 text-xs text-muted-foreground">
-                        {m.proposal.actions.map((a, j) => <li key={j}>• {describeAction(a)}</li>)}
-                      </ul>
-                      <div className="flex gap-2">
-                        <Button size="sm" disabled={applying} onClick={() => apply(m.proposal!, i)} className="gradient-setter text-setter-foreground border-0">
-                          {applying ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Check className="mr-1 h-3 w-3" />} Apply
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => reject(i)}><X className="mr-1 h-3 w-3" /> Reject</Button>
-                      </div>
+        <div className="relative flex-1 overflow-hidden">
+          <div ref={scrollRef} className="h-full overflow-y-auto overscroll-contain">
+            <div className="space-y-4 p-4">
+              {msgs.filter(m => !m.hidden).map((m, i) => (
+                <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
+                  <div className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-sm ${m.role === "user" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+                    <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider opacity-70">
+                      {m.role === "user" ? <UserIcon className="h-3 w-3" /> : <Bot className="h-3 w-3" />} {m.role === "user" ? "You" : "Assistant"}
                     </div>
-                  )}
+                    <div className="prose prose-sm max-w-none [&_p]:my-1"><ReactMarkdown>{m.content}</ReactMarkdown></div>
+                    {m.proposal && (
+                      <div className="mt-3 rounded-lg border border-setter/40 bg-card p-3 text-foreground">
+                        <div className="mb-2 text-xs font-semibold text-setter">Proposed changes</div>
+                        <div className="mb-2 text-sm">{m.proposal.summary}</div>
+                        <ul className="mb-3 space-y-1 text-xs text-muted-foreground">
+                          {m.proposal.actions.map((a, j) => <li key={j}>• {describeAction(a)}</li>)}
+                        </ul>
+                        <div className="flex gap-2">
+                          <Button size="sm" disabled={applying} onClick={() => apply(m.proposal!, i)} className="gradient-setter text-setter-foreground border-0">
+                            {applying ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Check className="mr-1 h-3 w-3" />} Apply
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => reject(i)}><X className="mr-1 h-3 w-3" /> Reject</Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-            {sending && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" /> Thinking…</div>}
+              ))}
+              {sending && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" /> Thinking…</div>}
+            </div>
           </div>
-        </ScrollArea>
+          {!atBottom && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => { setAtBottom(true); scrollToBottom("smooth"); }}
+              className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded-full border border-border bg-card/95 px-3 shadow-md backdrop-blur"
+            >
+              <ChevronDown className="mr-1 h-4 w-4" /> Jump to latest
+            </Button>
+          )}
+        </div>
+
         <div className="border-t border-border p-3">
-          <div className="flex gap-2">
+          {attachments.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {attachments.map((a, i) => (
+                <div key={i} className="group flex items-center gap-1.5 rounded-full border border-border bg-secondary/60 py-1 pl-2 pr-1 text-[11px]">
+                  {a.kind === "image" ? <ImageIcon className="h-3 w-3" /> : a.kind === "pdf" ? <FileText className="h-3 w-3" /> : <FileCode className="h-3 w-3" />}
+                  <span className="max-w-[140px] truncate">{a.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => setAttachments(arr => arr.filter((_, j) => j !== i))}
+                    className="rounded-full p-0.5 hover:bg-background"
+                    aria-label="Remove attachment"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex items-end gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".html,.htm,text/html,image/*,application/pdf,.pdf,text/plain,.txt,.md,.json,.css"
+              className="hidden"
+              onChange={(e) => { handleFiles(e.target.files); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 shrink-0"
+              onClick={() => fileInputRef.current?.click()}
+              title="Attach HTML / image / PDF"
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-              placeholder="Ask the assistant…"
+              placeholder="Ask the assistant… or drop an HTML mockup, image, or PDF."
               rows={2}
-              className="resize-none"
+              className="flex-1 resize-none"
             />
-            <Button onClick={send} disabled={sending || !input.trim()} className="gradient-setter text-setter-foreground border-0">
+            <Button onClick={send} disabled={sending || (!input.trim() && !attachments.length)} className="gradient-setter text-setter-foreground border-0">
               <Send className="h-4 w-4" />
             </Button>
           </div>
@@ -286,6 +417,15 @@ export function AIAssistantPanel({ open, onOpenChange, doc, clusters, onApplied 
   );
 }
 
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
 function serialize(doc: FullQuestionnaire, clusters: CareerCluster[]) {
   return {
     id: doc.id,
@@ -293,6 +433,8 @@ function serialize(doc: FullQuestionnaire, clusters: CareerCluster[]) {
     description: doc.description,
     is_published: doc.is_published,
     profile_schema: (doc as any).profile_schema ?? [],
+    report_style: (doc as any).report_style ?? {},
+    synthesis_style: (doc as any).synthesis_style ?? "",
     clusters: clusters.map(c => ({
       id: c.id,
       name: c.name,
@@ -382,6 +524,11 @@ function describeAction(a: ProposalAction): string {
     case "set_cluster_profile_datum": return `Set "${a.label}" on cluster "${a.cluster_name}"`;
     case "remove_cluster_profile_datum": return `Remove "${a.label}" from cluster "${a.cluster_name}"`;
     case "export_json": return `Download import-ready JSON${a.filename ? ` (${a.filename})` : ""}`;
+    case "set_report_style": {
+      const keys = a.report_style ? Object.keys(a.report_style) : [];
+      return `Restyle report UI (${keys.length ? keys.join(", ") : "preset"})`;
+    }
+    case "set_synthesis_style": return `Update profile-writing style (${(a.synthesis_style || "").length} chars of guidance)`;
   }
 }
 
@@ -615,6 +762,23 @@ async function applyAction(
       const fname = (a.filename && a.filename.trim()) || `${(doc.title || "questionnaire").replace(/[^\w.-]+/g, "-").toLowerCase()}.json`;
       const json = buildImportJson(doc, clusters);
       downloadJson(fname, json);
+      return { ok: true };
+    }
+
+    if (a.type === "set_report_style") {
+      if (!a.report_style || typeof a.report_style !== "object") return { ok: false, reason: "report_style missing" };
+      // Merge with whatever is already saved so partial proposals don't wipe other keys.
+      const current = ((doc as any).report_style ?? {}) as Record<string, any>;
+      const merged = { ...current, ...a.report_style };
+      const { error } = await supabase.from("questionnaires").update({ report_style: merged } as any).eq("id", doc.id);
+      if (error) return { ok: false, reason: error.message };
+      return { ok: true };
+    }
+
+    if (a.type === "set_synthesis_style") {
+      if (typeof a.synthesis_style !== "string") return { ok: false, reason: "synthesis_style missing" };
+      const { error } = await supabase.from("questionnaires").update({ synthesis_style: a.synthesis_style } as any).eq("id", doc.id);
+      if (error) return { ok: false, reason: error.message };
       return { ok: true };
     }
 

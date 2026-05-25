@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import confetti from "canvas-confetti";
 import StudentShell from "@/components/student/StudentShell";
+import { ReportSkin } from "@/components/ReportSkin";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Download, RotateCcw, ArrowLeft, Sparkles, Trophy, TrendingUp, TrendingDown } from "lucide-react";
@@ -133,6 +134,7 @@ export default function ResultsPage() {
         </div>
       </div>
 
+      <ReportSkin style={(doc as any)?.report_style}>
       <div ref={printRef} className="space-y-6">
         {/* HERO — premium navy */}
         <section className="lass-hero-navy lass-fade-up relative overflow-hidden rounded-[28px] px-6 py-10 sm:px-12 sm:py-14 shadow-elevated">
@@ -323,6 +325,7 @@ export default function ResultsPage() {
           Generated {submittedAt ? new Date(submittedAt).toLocaleString() : ""} · {profile?.full_name} {profile?.class_name ? `· ${profile.class_name}` : ""}
         </div>
       </div>
+      </ReportSkin>
     </StudentShell>
   );
 }

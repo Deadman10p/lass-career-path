@@ -9,6 +9,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 import { ArrowLeft, Trophy, User as UserIcon, Calendar, ClipboardList } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchClusters, fetchFullQuestionnaire, fetchActiveClusterIdsForQuestionnaire, getProfileData } from "@/lib/api";
+import { ReportSkin } from "@/components/ReportSkin";
 import { generateInsights } from "@/lib/scoring";
 import type { CareerCluster, FullQuestionnaire } from "@/lib/types";
 import {
@@ -92,6 +93,7 @@ export default function SetterStudentReport() {
         <Button variant="ghost" size="sm" onClick={() => navigate(-1)}><ArrowLeft className="mr-1 h-4 w-4" /> Back</Button>
       </div>
 
+      <ReportSkin style={(doc as any)?.report_style}>
       <div className="space-y-5">
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="overflow-hidden rounded-3xl gradient-setter p-8 text-setter-foreground shadow-glow">
           <div className="flex items-center gap-2 text-xs uppercase tracking-widest opacity-90">
@@ -250,6 +252,7 @@ export default function SetterStudentReport() {
           </div>
         )}
       </div>
+      </ReportSkin>
     </PageShell>
   );
 }

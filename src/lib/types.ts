@@ -27,6 +27,22 @@ export interface Questionnaire {
   updated_at: string;
   /** Optional list of attribute keys this questionnaire uses for adaptive reports */
   profile_schema?: string[];
+  /** Visual style overrides applied to the report / profile pages */
+  report_style?: ReportStyle;
+  /** Free-form guidance the AI uses when writing the personalised profile (tone, methodology, wording) */
+  synthesis_style?: string;
+}
+
+export interface ReportStyle {
+  accent?: string;        // hex, e.g. "#4F46E5"
+  heroBg?: string;        // CSS background string for the hero section (gradient or solid)
+  heroTextColor?: string;
+  fontDisplay?: string;   // CSS font-family for headings
+  fontBody?: string;      // CSS font-family for body text
+  cardRadius?: string;    // e.g. "1.5rem"
+  heroRadius?: string;    // e.g. "28px"
+  tone?: "warm" | "cool" | "editorial" | "minimal" | "vivid";
+  customCss?: string;     // raw CSS scoped to .lass-report-skin
 }
 
 export interface Section {

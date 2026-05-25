@@ -46,6 +46,8 @@ Deno.serve(async (req) => {
       return Array.isArray(q?.profile_schema) && q!.profile_schema!.length ? (q!.profile_schema as string[]) : ["Strengths", "Weaknesses", "Growth Tips"];
     };
 
+    const synthesisStyle = (q as any)?.synthesis_style ? String((q as any).synthesis_style).trim() : "";
+
     const prompt = `You are an experienced school counsellor writing a personalised, considered profile for a student.
 The inventory is "${q?.title}"${q?.description ? ` — ${q?.description}` : ""}. Treat the inventory as it presents itself
 (it could be a personality, career interest, learning style, values, aptitude or any other kind of self-assessment).
@@ -55,7 +57,7 @@ Write like someone who actually read the results and thought about them — not 
 Voice: warm, observant, second person ("you"). Specific. Slightly literary. No bullet lists, no clichés like
 "unlock your potential", no horoscope-speak, no excessive hedging. Reference the student's pattern of scores when relevant
 (e.g. a clear top, a tight cluster, a low area). Aim for "medium" depth — about 2-3 sentences per label, ~55–90 words.
-
+${synthesisStyle ? `\nADDITIONAL STYLE GUIDANCE FROM THE COUNSELLOR (follow this carefully — it overrides defaults where they conflict):\n${synthesisStyle}\n` : ""}
 Top clusters and the labels you must fill for each:
 ${top3.map((r: any, i: number) => `#${i + 1} id=${r.cluster.id} name="${r.cluster.name}" total=${r.total_score}
   description=${JSON.stringify(r.cluster.description ?? "")}
