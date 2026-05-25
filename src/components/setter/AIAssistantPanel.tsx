@@ -433,6 +433,8 @@ function serialize(doc: FullQuestionnaire, clusters: CareerCluster[]) {
     description: doc.description,
     is_published: doc.is_published,
     profile_schema: (doc as any).profile_schema ?? [],
+    report_style: (doc as any).report_style ?? {},
+    synthesis_style: (doc as any).synthesis_style ?? "",
     clusters: clusters.map(c => ({
       id: c.id,
       name: c.name,
