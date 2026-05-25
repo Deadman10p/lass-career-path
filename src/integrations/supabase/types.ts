@@ -229,6 +229,8 @@ export type Database = {
           id: string
           is_published: boolean
           profile_schema: Json
+          report_style: Json
+          synthesis_style: string
           title: string
           updated_at: string
         }
@@ -239,6 +241,8 @@ export type Database = {
           id?: string
           is_published?: boolean
           profile_schema?: Json
+          report_style?: Json
+          synthesis_style?: string
           title?: string
           updated_at?: string
         }
@@ -249,6 +253,8 @@ export type Database = {
           id?: string
           is_published?: boolean
           profile_schema?: Json
+          report_style?: Json
+          synthesis_style?: string
           title?: string
           updated_at?: string
         }
