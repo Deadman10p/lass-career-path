@@ -252,6 +252,7 @@ export default function SetterStudentReport() {
           </div>
         )}
       </div>
+      </ReportSkin>
     </PageShell>
   );
 }
