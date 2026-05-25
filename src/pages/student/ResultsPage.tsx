@@ -325,6 +325,7 @@ export default function ResultsPage() {
           Generated {submittedAt ? new Date(submittedAt).toLocaleString() : ""} · {profile?.full_name} {profile?.class_name ? `· ${profile.class_name}` : ""}
         </div>
       </div>
+      </ReportSkin>
     </StudentShell>
   );
 }
