@@ -53,11 +53,22 @@ interface ProposalAction {
   content?: string;
   // export
   filename?: string;
+  // report style / synthesis style
+  report_style?: ReportStyle;
+  synthesis_style?: string;
 }
 
 interface Proposal {
   summary: string;
   actions: ProposalAction[];
+}
+
+interface Attachment {
+  name: string;
+  mime: string;
+  kind: "image" | "pdf" | "html" | "text";
+  dataUrl?: string;
+  text?: string;
 }
 
 const HISTORY_KEEP = 10;          // keep last N raw turns verbatim
