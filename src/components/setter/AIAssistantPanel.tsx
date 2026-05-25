@@ -22,7 +22,8 @@ interface ProposalAction {
     | "set_weight" | "set_meta"
     | "add_cluster" | "edit_cluster" | "delete_cluster"
     | "set_cluster_profile_datum" | "remove_cluster_profile_datum"
-    | "export_json";
+    | "export_json"
+    | "set_report_style" | "set_synthesis_style";
   section_title?: string;
   section_id?: string;
   question_id?: string;
