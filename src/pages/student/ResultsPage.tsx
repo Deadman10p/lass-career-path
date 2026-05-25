@@ -134,6 +134,7 @@ export default function ResultsPage() {
         </div>
       </div>
 
+      <ReportSkin style={(doc as any)?.report_style}>
       <div ref={printRef} className="space-y-6">
         {/* HERO — premium navy */}
         <section className="lass-hero-navy lass-fade-up relative overflow-hidden rounded-[28px] px-6 py-10 sm:px-12 sm:py-14 shadow-elevated">
