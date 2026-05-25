@@ -187,12 +187,18 @@ export function AIAssistantPanel({ open, onOpenChange, doc, clusters, onApplied 
   };
 
   const send = async () => {
-    if (!input.trim() || sending) return;
-    const userMsg = input.trim();
+    if ((!input.trim() && !attachments.length) || sending) return;
+    const userMsg = input.trim() || "(see attached file)";
+    const attached = attachments;
     setInput("");
-    const next = [...msgs, { role: "user" as const, content: userMsg }];
+    setAttachments([]);
+    const attachNote = attached.length
+      ? "\n\n" + attached.map(a => `📎 *${a.kind.toUpperCase()}* — ${a.name}`).join("\n")
+      : "";
+    const next = [...msgs, { role: "user" as const, content: userMsg + attachNote }];
     setMsgs(next);
     setSending(true);
+    setAtBottom(true);
     try {
       const { data, error } = await supabase.functions.invoke("ai-assistant", {
         body: {
@@ -200,6 +206,7 @@ export function AIAssistantPanel({ open, onOpenChange, doc, clusters, onApplied 
           history: buildHistoryForApi(),
           questionnaire: liveSnapshot,
           memory_summary: memorySummary || undefined,
+          attachments: attached,
         },
       });
       if (error) throw error;
@@ -212,6 +219,36 @@ export function AIAssistantPanel({ open, onOpenChange, doc, clusters, onApplied 
     } finally {
       setSending(false);
     }
+  };
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || !files.length) return;
+    const next: Attachment[] = [];
+    for (const file of Array.from(files).slice(0, 4)) {
+      if (file.size > 12 * 1024 * 1024) { toast.error(`"${file.name}" is over 12MB`); continue; }
+      const mime = file.type || "";
+      const lower = file.name.toLowerCase();
+      try {
+        if (mime.startsWith("image/")) {
+          const dataUrl = await fileToDataUrl(file);
+          next.push({ name: file.name, mime, kind: "image", dataUrl });
+        } else if (mime === "application/pdf" || lower.endsWith(".pdf")) {
+          const dataUrl = await fileToDataUrl(file);
+          next.push({ name: file.name, mime: "application/pdf", kind: "pdf", dataUrl });
+        } else if (mime === "text/html" || lower.endsWith(".html") || lower.endsWith(".htm")) {
+          const text = await file.text();
+          next.push({ name: file.name, mime: "text/html", kind: "html", text });
+        } else if (mime.startsWith("text/") || lower.endsWith(".txt") || lower.endsWith(".md") || lower.endsWith(".css") || lower.endsWith(".json")) {
+          const text = await file.text();
+          next.push({ name: file.name, mime: mime || "text/plain", kind: "text", text });
+        } else {
+          toast.error(`"${file.name}" — unsupported type (HTML, image, PDF, text only)`);
+        }
+      } catch (e: any) {
+        toast.error(`Could not read "${file.name}": ${e?.message ?? e}`);
+      }
+    }
+    if (next.length) setAttachments(a => [...a, ...next]);
   };
 
   const apply = async (proposal: Proposal, idx: number) => {
