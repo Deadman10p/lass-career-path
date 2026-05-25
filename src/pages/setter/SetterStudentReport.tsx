@@ -9,6 +9,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 import { ArrowLeft, Trophy, User as UserIcon, Calendar, ClipboardList } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchClusters, fetchFullQuestionnaire, fetchActiveClusterIdsForQuestionnaire, getProfileData } from "@/lib/api";
+import { ReportSkin } from "@/components/ReportSkin";
 import { generateInsights } from "@/lib/scoring";
 import type { CareerCluster, FullQuestionnaire } from "@/lib/types";
 import {
