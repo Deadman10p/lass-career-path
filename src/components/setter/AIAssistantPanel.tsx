@@ -769,7 +769,7 @@ async function applyAction(
       if (!a.report_style || typeof a.report_style !== "object") return { ok: false, reason: "report_style missing" };
       // Merge with whatever is already saved so partial proposals don't wipe other keys.
       const current = ((doc as any).report_style ?? {}) as Record<string, any>;
-      const merged = { ...current, ...a.report_style };
+      const merged = sanitizeReportStyle({ ...current, ...a.report_style });
       const { error } = await supabase.from("questionnaires").update({ report_style: merged } as any).eq("id", doc.id);
       if (error) return { ok: false, reason: error.message };
       return { ok: true };
@@ -786,5 +786,22 @@ async function applyAction(
   } catch (e: any) {
     return { ok: false, reason: e?.message || "exception" };
   }
+}
+
+function sanitizeReportStyle(style: ReportStyle): ReportStyle {
+  const clean: ReportStyle = { ...style };
+  if (clean.accent && clean.accent.includes("--lass-cluster-dominant-color")) {
+    clean.accent = "var(--lass-cluster-dominant-color)";
+  }
+  if (clean.customCss) {
+    clean.customCss = clean.customCss
+      .replace(/<\/?style[^>]*>/gi, "")
+      .replace(/@import[^;]+;/gi, "")
+      .replace(/(^|})\s*(html|body|h[1-6]|p|div|section|span)\s*\{[^}]*\}/gi, "$1")
+      .replace(/\.lass-report-skin\s+(h[1-6]|p|div|section|span|body|html)\s*\{[^}]*\}/gi, "")
+      .replace(/--(background|foreground|card|card-foreground|primary|primary-foreground|secondary|secondary-foreground|muted|muted-foreground|border|ring|student|setter|brand-red|brand-blue|brand-black)\s*:[^;]+;/gi, "")
+      .trim();
+  }
+  return clean;
 }
 

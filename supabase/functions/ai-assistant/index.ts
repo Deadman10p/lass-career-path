@@ -36,6 +36,7 @@ A proposal action is one of:
 - { "type": "export_json", "filename"?: "my-inventory.json" }
 - { "type": "set_report_style", "report_style": { "accent"?: "#4F46E5", "heroBg"?: "linear-gradient(135deg,#0f172a,#1e293b)", "heroTextColor"?: "#ffffff", "fontDisplay"?: "'Playfair Display', serif", "fontBody"?: "'DM Sans', sans-serif", "cardRadius"?: "1.5rem", "heroRadius"?: "28px", "tone"?: "warm|cool|editorial|minimal|vivid", "customCss"?: ".lass-report-skin .lass-bar-fill { ... }" } }
    // ↑ Updates the look of BOTH the student Results page AND the counsellor's Individual Report. customCss is scoped to .lass-report-skin so it only affects the report surfaces.
+   // SAFETY: never output full-page CSS such as body/html/:root, never style bare h1/p/div/section/span, never hide/reposition [data-pdf-section], never use opacity/filter/transform for report sections, and keep customCss small. For dominant-cluster color adaptation, use var(--lass-cluster-dominant-color) in accent/heroBg; the app resolves it safely for screen and PDF.
    // When the user attaches an HTML mockup or screenshot, derive concrete values from it and propose them here.
 - { "type": "set_synthesis_style", "synthesis_style": "Plain-English guidance on tone, vocabulary, length, methodology, what to emphasise or avoid when the AI writes the student's profile. Free text, up to ~600 words." }
    // ↑ Updates how the synthesis AI writes the final profile output (wording, methodology, voice, framing).
