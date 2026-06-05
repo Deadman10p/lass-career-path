@@ -102,14 +102,60 @@ export default function ResultsPage() {
 
   const downloadPdf = async () => {
     if (!printRef.current) return;
-    const html2pdf = (await import("html2pdf.js")).default;
-    await html2pdf().set({
-      margin: [10, 10, 10, 10],
-      filename: `lass-results-${(profile?.full_name ?? "student").replace(/\s+/g, "-")}.pdf`,
-      image: { type: "jpeg", quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-    }).from(printRef.current).save();
+    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+      import("html2canvas"),
+      import("jspdf"),
+    ]);
+
+    const A4_W = 210, A4_H = 297, MARGIN = 10;
+    const CONTENT_W = A4_W - MARGIN * 2;
+    const PAGE_H = A4_H - MARGIN * 2;
+    const GAP = 3;
+
+    const sections = Array.from(
+      printRef.current.querySelectorAll<HTMLElement>("[data-pdf-section]")
+    );
+    const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+    let y = MARGIN;
+    let first = true;
+
+    for (const section of sections) {
+      const canvas = await html2canvas(section, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
+      const hMM = (canvas.height * CONTENT_W) / canvas.width;
+
+      // If a single section is taller than a full page, slice it across pages.
+      if (hMM > PAGE_H) {
+        const pageHeightPx = (PAGE_H * canvas.width) / CONTENT_W;
+        let offsetPx = 0;
+        while (offsetPx < canvas.height) {
+          const sliceHpx = Math.min(pageHeightPx, canvas.height - offsetPx);
+          const slice = document.createElement("canvas");
+          slice.width = canvas.width;
+          slice.height = sliceHpx;
+          const ctx = slice.getContext("2d")!;
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, slice.width, slice.height);
+          ctx.drawImage(canvas, 0, offsetPx, canvas.width, sliceHpx, 0, 0, canvas.width, sliceHpx);
+          if (!first) pdf.addPage();
+          first = false;
+          const sliceHmm = (sliceHpx * CONTENT_W) / canvas.width;
+          pdf.addImage(slice.toDataURL("image/jpeg", 0.95), "JPEG", MARGIN, MARGIN, CONTENT_W, sliceHmm);
+          offsetPx += sliceHpx;
+          y = MARGIN + sliceHmm + GAP;
+        }
+        continue;
+      }
+
+      if (!first && y + hMM > MARGIN + PAGE_H) {
+        pdf.addPage();
+        y = MARGIN;
+      }
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", MARGIN, y, CONTENT_W, hMM);
+      y += hMM + GAP;
+      first = false;
+    }
+
+    pdf.save(`lass-results-${(profile?.full_name ?? "student").replace(/\s+/g, "-")}.pdf`);
   };
 
   if (loading) {
@@ -137,7 +183,7 @@ export default function ResultsPage() {
       <ReportSkin style={(doc as any)?.report_style}>
       <div ref={printRef} className="space-y-6">
         {/* HERO — premium navy */}
-        <section className="lass-hero-navy lass-fade-up relative overflow-hidden rounded-[28px] px-6 py-10 sm:px-12 sm:py-14 shadow-elevated">
+        <section data-pdf-section className="lass-hero-navy lass-fade-up relative overflow-hidden rounded-[28px] px-6 py-10 sm:px-12 sm:py-14 shadow-elevated">
           <div className="relative z-10 max-w-3xl">
             <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-white/70">
               <Trophy className="h-3.5 w-3.5" /> {doc?.title ?? "Inventory"} · Results
@@ -175,7 +221,7 @@ export default function ResultsPage() {
         </section>
 
         {/* STRENGTH / GROWTH PANELS */}
-        <section className="grid gap-4 lg:grid-cols-2">
+        <section data-pdf-section className="grid gap-4 lg:grid-cols-2">
           <div className="lass-fade-up-2 rounded-2xl border border-border bg-card p-6 shadow-card">
             <div className="mb-4 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-[hsl(var(--brand-blue))]">
               <TrendingUp className="h-4 w-4" /> Strength analysis
@@ -222,7 +268,7 @@ export default function ResultsPage() {
         </section>
 
         {/* RADAR — only active clusters */}
-        <section className="lass-fade-up-3 rounded-2xl border border-border bg-card p-6 shadow-card">
+        <section data-pdf-section className="lass-fade-up-3 rounded-2xl border border-border bg-card p-6 shadow-card">
           <h3 className="mb-1 font-serif-display text-2xl">Your profile shape</h3>
           <p className="mb-4 text-xs text-muted-foreground">Built from {ranked.length} active categor{ranked.length === 1 ? "y" : "ies"} in this inventory.</p>
           <div className="h-72">
@@ -243,7 +289,7 @@ export default function ResultsPage() {
           const data = getProfileData(top.cluster, aiAttrs);
           if (!data.length) return null;
           return (
-            <section className="lass-fade-up-4 space-y-4">
+            <section data-pdf-section className="lass-fade-up-4 space-y-4">
               <div className="flex items-end justify-between gap-3">
                 <div>
                   <h3 className="font-serif-display text-2xl">Insights stack</h3>
@@ -273,14 +319,14 @@ export default function ResultsPage() {
         })()}
 
         {insight?.overview && (
-          <section className="lass-fade-up-4 rounded-2xl border border-[hsl(var(--brand-blue))]/25 bg-[hsl(var(--brand-blue))]/5 p-6 shadow-card">
+          <section data-pdf-section className="lass-fade-up-4 rounded-2xl border border-[hsl(var(--brand-blue))]/25 bg-[hsl(var(--brand-blue))]/5 p-6 shadow-card">
             <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[hsl(var(--brand-blue))]"><Sparkles className="h-3.5 w-3.5" /> Personalised summary</div>
             <p className="font-serif-display text-lg leading-relaxed italic text-foreground/90">"{insight.overview}"</p>
           </section>
         )}
 
         {/* ALL CATEGORIES with custom bars */}
-        <section className="rounded-2xl border border-border bg-card p-6 shadow-card">
+        <section data-pdf-section className="rounded-2xl border border-border bg-card p-6 shadow-card">
           <h3 className="mb-4 font-serif-display text-2xl">All categories ranked</h3>
           <ul className="space-y-4">
             {ranked.map((r, i) => (
@@ -303,7 +349,7 @@ export default function ResultsPage() {
 
         {/* LETTERED SECTIONS — debiased headers */}
         {doc && doc.sections.length > 0 && (
-          <section className="rounded-2xl border border-border bg-card p-6 shadow-card">
+          <section data-pdf-section className="rounded-2xl border border-border bg-card p-6 shadow-card">
             <h3 className="mb-4 font-serif-display text-2xl">Inventory map</h3>
             <ol className="space-y-3">
               {doc.sections.map((sec, i) => (
@@ -321,7 +367,7 @@ export default function ResultsPage() {
           </section>
         )}
 
-        <div className="text-center text-xs text-muted-foreground print:mt-4">
+        <div data-pdf-section className="text-center text-xs text-muted-foreground print:mt-4">
           Generated {submittedAt ? new Date(submittedAt).toLocaleString() : ""} · {profile?.full_name} {profile?.class_name ? `· ${profile.class_name}` : ""}
         </div>
       </div>
