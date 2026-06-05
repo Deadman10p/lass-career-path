@@ -22,6 +22,7 @@ export function ReportSkin({
   const skinSelector = `.lass-report-skin[data-skin="${id}"]`;
   const safeCustomCss = sanitizeReportCss(s.customCss, skinSelector);
   const dominantHex = normalizeHex(dominantColor) ?? "#1B3A6B";
+  const accentShadow = s.accent?.includes("var(") ? dominantHex : s.accent;
 
   const vars: Record<string, string> = {};
   vars["--lass-cluster-dominant-color"] = dominantHex;
@@ -39,7 +40,7 @@ export function ReportSkin({
     ${skinSelector} { ${s.fontBody ? `font-family: var(--report-font-body);` : ""} }
     ${skinSelector} .lass-hero-navy { ${s.heroBg ? `background: var(--report-hero-bg) !important;` : ""} ${s.heroTextColor ? `color: var(--report-hero-text) !important;` : ""} ${s.heroRadius ? `border-radius: var(--report-hero-radius);` : ""} }
     ${skinSelector} .lass-bar-fill { ${s.accent ? `background: var(--report-accent) !important;` : ""} }
-    ${skinSelector} .lass-glow-badge { ${s.accent ? `box-shadow: 0 0 0 1px ${s.accent}33, 0 12px 32px -10px ${s.accent}55;` : ""} }
+    ${skinSelector} .lass-glow-badge { ${accentShadow ? `box-shadow: 0 0 0 1px ${accentShadow}33, 0 12px 32px -10px ${accentShadow}55;` : ""} }
     ${skinSelector} [class*="rounded-2xl"] { ${s.cardRadius ? `border-radius: var(--report-card-radius);` : ""} }
     ${safeCustomCss}
     ${skinSelector} [data-pdf-section] { display: block; visibility: visible; min-height: 0; }
