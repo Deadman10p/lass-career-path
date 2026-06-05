@@ -183,7 +183,7 @@ export default function ResultsPage() {
       <ReportSkin style={(doc as any)?.report_style}>
       <div ref={printRef} className="space-y-6">
         {/* HERO — premium navy */}
-        <section className="lass-hero-navy lass-fade-up relative overflow-hidden rounded-[28px] px-6 py-10 sm:px-12 sm:py-14 shadow-elevated">
+        <section data-pdf-section className="lass-hero-navy lass-fade-up relative overflow-hidden rounded-[28px] px-6 py-10 sm:px-12 sm:py-14 shadow-elevated">
           <div className="relative z-10 max-w-3xl">
             <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-white/70">
               <Trophy className="h-3.5 w-3.5" /> {doc?.title ?? "Inventory"} · Results
@@ -221,7 +221,7 @@ export default function ResultsPage() {
         </section>
 
         {/* STRENGTH / GROWTH PANELS */}
-        <section className="grid gap-4 lg:grid-cols-2">
+        <section data-pdf-section className="grid gap-4 lg:grid-cols-2">
           <div className="lass-fade-up-2 rounded-2xl border border-border bg-card p-6 shadow-card">
             <div className="mb-4 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-[hsl(var(--brand-blue))]">
               <TrendingUp className="h-4 w-4" /> Strength analysis
@@ -268,7 +268,7 @@ export default function ResultsPage() {
         </section>
 
         {/* RADAR — only active clusters */}
-        <section className="lass-fade-up-3 rounded-2xl border border-border bg-card p-6 shadow-card">
+        <section data-pdf-section className="lass-fade-up-3 rounded-2xl border border-border bg-card p-6 shadow-card">
           <h3 className="mb-1 font-serif-display text-2xl">Your profile shape</h3>
           <p className="mb-4 text-xs text-muted-foreground">Built from {ranked.length} active categor{ranked.length === 1 ? "y" : "ies"} in this inventory.</p>
           <div className="h-72">
@@ -289,7 +289,7 @@ export default function ResultsPage() {
           const data = getProfileData(top.cluster, aiAttrs);
           if (!data.length) return null;
           return (
-            <section className="lass-fade-up-4 space-y-4">
+            <section data-pdf-section className="lass-fade-up-4 space-y-4">
               <div className="flex items-end justify-between gap-3">
                 <div>
                   <h3 className="font-serif-display text-2xl">Insights stack</h3>
@@ -319,14 +319,14 @@ export default function ResultsPage() {
         })()}
 
         {insight?.overview && (
-          <section className="lass-fade-up-4 rounded-2xl border border-[hsl(var(--brand-blue))]/25 bg-[hsl(var(--brand-blue))]/5 p-6 shadow-card">
+          <section data-pdf-section className="lass-fade-up-4 rounded-2xl border border-[hsl(var(--brand-blue))]/25 bg-[hsl(var(--brand-blue))]/5 p-6 shadow-card">
             <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[hsl(var(--brand-blue))]"><Sparkles className="h-3.5 w-3.5" /> Personalised summary</div>
             <p className="font-serif-display text-lg leading-relaxed italic text-foreground/90">"{insight.overview}"</p>
           </section>
         )}
 
         {/* ALL CATEGORIES with custom bars */}
-        <section className="rounded-2xl border border-border bg-card p-6 shadow-card">
+        <section data-pdf-section className="rounded-2xl border border-border bg-card p-6 shadow-card">
           <h3 className="mb-4 font-serif-display text-2xl">All categories ranked</h3>
           <ul className="space-y-4">
             {ranked.map((r, i) => (
@@ -349,7 +349,7 @@ export default function ResultsPage() {
 
         {/* LETTERED SECTIONS — debiased headers */}
         {doc && doc.sections.length > 0 && (
-          <section className="rounded-2xl border border-border bg-card p-6 shadow-card">
+          <section data-pdf-section className="rounded-2xl border border-border bg-card p-6 shadow-card">
             <h3 className="mb-4 font-serif-display text-2xl">Inventory map</h3>
             <ol className="space-y-3">
               {doc.sections.map((sec, i) => (
@@ -367,7 +367,7 @@ export default function ResultsPage() {
           </section>
         )}
 
-        <div className="text-center text-xs text-muted-foreground print:mt-4">
+        <div data-pdf-section className="text-center text-xs text-muted-foreground print:mt-4">
           Generated {submittedAt ? new Date(submittedAt).toLocaleString() : ""} · {profile?.full_name} {profile?.class_name ? `· ${profile.class_name}` : ""}
         </div>
       </div>
