@@ -21,11 +21,12 @@ export function ReportSkin({
   const s = style ?? {};
   const skinSelector = `.lass-report-skin[data-skin="${id}"]`;
   const safeCustomCss = sanitizeReportCss(s.customCss, skinSelector);
+  const dominantHex = normalizeHex(dominantColor) ?? "#1B3A6B";
 
   const vars: Record<string, string> = {};
-  vars["--lass-cluster-dominant-color"] = normalizeHex(dominantColor) ?? "#1B3A6B";
+  vars["--lass-cluster-dominant-color"] = dominantHex;
   if (s.accent) vars["--report-accent"] = s.accent;
-  if (s.heroBg) vars["--report-hero-bg"] = s.heroBg;
+  if (s.heroBg) vars["--report-hero-bg"] = resolveHeroBackground(s.heroBg, dominantHex);
   if (s.heroTextColor) vars["--report-hero-text"] = s.heroTextColor;
   if (s.fontDisplay) vars["--report-font-display"] = s.fontDisplay;
   if (s.fontBody) vars["--report-font-body"] = s.fontBody;
@@ -62,6 +63,20 @@ function normalizeHex(value?: string | null) {
   if (/^#[0-9a-f]{6}$/i.test(v)) return v;
   if (/^[0-9a-f]{6}$/i.test(v)) return `#${v}`;
   return null;
+}
+
+function darkenHex(hex: string, amount = 0.28) {
+  const n = hex.replace("#", "");
+  const next = [0, 2, 4].map((i) => Math.max(0, Math.round(parseInt(n.slice(i, i + 2), 16) * (1 - amount))));
+  return `#${next.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function resolveHeroBackground(value: string, dominantHex: string) {
+  const v = value.trim();
+  if (v.includes("color-mix") || v.includes("--lass-cluster-dominant-color")) {
+    return `linear-gradient(135deg, ${dominantHex} 0%, ${darkenHex(dominantHex)} 100%)`;
+  }
+  return v;
 }
 
 function sanitizeReportCss(css: string | undefined, skinSelector: string) {
