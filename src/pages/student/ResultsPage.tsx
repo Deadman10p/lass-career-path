@@ -111,6 +111,30 @@ export default function ResultsPage() {
     const CONTENT_W = A4_W - MARGIN * 2;
     const PAGE_H = A4_H - MARGIN * 2;
     const GAP = 3;
+    const SCALE = 3;
+    const exportStyles = `
+      .lass-pdf-export, .lass-pdf-export * {
+        animation: none !important;
+        transition: none !important;
+        transform: none !important;
+        opacity: 1 !important;
+        filter: none !important;
+      }
+      .lass-pdf-export [data-pdf-section] {
+        display: block !important;
+        visibility: visible !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .lass-pdf-export .lass-hero-navy {
+        background: var(--report-hero-bg, linear-gradient(140deg, #0f2547 0%, #1B3A6B 55%, #14305c 100%)) !important;
+      }
+      .lass-pdf-export .shadow-card,
+      .lass-pdf-export .shadow-elevated,
+      .lass-pdf-export .shadow-glow { box-shadow: none !important; }
+      .lass-pdf-export .recharts-wrapper,
+      .lass-pdf-export .recharts-surface { overflow: visible !important; }
+    `;
 
     const sections = Array.from(
       printRef.current.querySelectorAll<HTMLElement>("[data-pdf-section]")
@@ -119,40 +143,59 @@ export default function ResultsPage() {
     let y = MARGIN;
     let first = true;
 
-    for (const section of sections) {
-      const canvas = await html2canvas(section, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
-      const hMM = (canvas.height * CONTENT_W) / canvas.width;
+    printRef.current.classList.add("lass-pdf-export");
+    try {
+      await document.fonts?.ready;
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 
-      // If a single section is taller than a full page, slice it across pages.
-      if (hMM > PAGE_H) {
-        const pageHeightPx = (PAGE_H * canvas.width) / CONTENT_W;
-        let offsetPx = 0;
-        while (offsetPx < canvas.height) {
-          const sliceHpx = Math.min(pageHeightPx, canvas.height - offsetPx);
-          const slice = document.createElement("canvas");
-          slice.width = canvas.width;
-          slice.height = sliceHpx;
-          const ctx = slice.getContext("2d")!;
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, slice.width, slice.height);
-          ctx.drawImage(canvas, 0, offsetPx, canvas.width, sliceHpx, 0, 0, canvas.width, sliceHpx);
-          if (!first) pdf.addPage();
-          first = false;
-          const sliceHmm = (sliceHpx * CONTENT_W) / canvas.width;
-          pdf.addImage(slice.toDataURL("image/jpeg", 0.95), "JPEG", MARGIN, MARGIN, CONTENT_W, sliceHmm);
-          offsetPx += sliceHpx;
-          y = MARGIN + sliceHmm + GAP;
+      for (const section of sections) {
+        const canvas = await html2canvas(section, {
+          scale: SCALE,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          logging: false,
+          windowWidth: Math.max(document.documentElement.clientWidth, printRef.current.scrollWidth),
+          onclone: (clonedDoc) => {
+            const style = clonedDoc.createElement("style");
+            style.textContent = exportStyles;
+            clonedDoc.head.appendChild(style);
+          },
+        });
+        const hMM = (canvas.height * CONTENT_W) / canvas.width;
+
+        // If a single section is taller than a full page, slice it across pages.
+        if (hMM > PAGE_H) {
+          const pageHeightPx = Math.floor((PAGE_H * canvas.width) / CONTENT_W);
+          let offsetPx = 0;
+          while (offsetPx < canvas.height) {
+            const sliceHpx = Math.min(pageHeightPx, canvas.height - offsetPx);
+            const slice = document.createElement("canvas");
+            slice.width = canvas.width;
+            slice.height = sliceHpx;
+            const ctx = slice.getContext("2d")!;
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, slice.width, slice.height);
+            ctx.drawImage(canvas, 0, offsetPx, canvas.width, sliceHpx, 0, 0, canvas.width, sliceHpx);
+            if (!first) pdf.addPage();
+            first = false;
+            const sliceHmm = (sliceHpx * CONTENT_W) / canvas.width;
+            pdf.addImage(slice.toDataURL("image/png"), "PNG", MARGIN, MARGIN, CONTENT_W, sliceHmm, undefined, "FAST");
+            offsetPx += sliceHpx;
+            y = MARGIN + sliceHmm + GAP;
+          }
+          continue;
         }
-        continue;
-      }
 
-      if (!first && y + hMM > MARGIN + PAGE_H) {
-        pdf.addPage();
-        y = MARGIN;
+        if (!first && y + hMM > MARGIN + PAGE_H) {
+          pdf.addPage();
+          y = MARGIN;
+        }
+        pdf.addImage(canvas.toDataURL("image/png"), "PNG", MARGIN, y, CONTENT_W, hMM, undefined, "FAST");
+        y += hMM + GAP;
+        first = false;
       }
-      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", MARGIN, y, CONTENT_W, hMM);
-      y += hMM + GAP;
-      first = false;
+    } finally {
+      printRef.current.classList.remove("lass-pdf-export");
     }
 
     pdf.save(`lass-results-${(profile?.full_name ?? "student").replace(/\s+/g, "-")}.pdf`);
@@ -180,7 +223,7 @@ export default function ResultsPage() {
         </div>
       </div>
 
-      <ReportSkin style={(doc as any)?.report_style}>
+      <ReportSkin style={(doc as any)?.report_style} dominantColor={top.cluster.color_hex}>
       <div ref={printRef} className="space-y-6">
         {/* HERO — premium navy */}
         <section data-pdf-section className="lass-hero-navy lass-fade-up relative overflow-hidden rounded-[28px] px-6 py-10 sm:px-12 sm:py-14 shadow-elevated">
