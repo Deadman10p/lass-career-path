@@ -66,10 +66,14 @@ function normalizeHex(value?: string | null) {
 
 function sanitizeReportCss(css: string | undefined, skinSelector: string) {
   if (!css) return "";
+  const elementRule = /\.lass-report-skin\s+(h[1-6]|p|div|section|span|body|html)\s*\{[^}]*\}/gi;
   return css
     .replace(/<\/?style[^>]*>/gi, "")
     .replace(/@import[^;]+;/gi, "")
     .replace(/url\(\s*['"]?javascript:[^)]+\)/gi, "none")
+    .replace(elementRule, "")
+    .replace(/(^|})\s*(h[1-6]|p|div|section|span|html|body)\s*\{[^}]*\}/gi, "$1")
+    .replace(/--(background|foreground|card|card-foreground|popover|popover-foreground|primary|primary-foreground|secondary|secondary-foreground|muted|muted-foreground|accent|accent-foreground|border|input|ring|destructive|destructive-foreground|success|warning|student|student-foreground|setter|setter-foreground|brand-red|brand-blue|brand-black)\s*:[^;]+;/gi, "")
     .replace(/(^|})\s*(html|body)\s*\{[^}]*\}/gi, "$1")
     .replace(/:root\s*\{/gi, `${skinSelector} {`)
     .replace(/\.lass-report-skin(?!\[data-skin=)/g, skinSelector);
