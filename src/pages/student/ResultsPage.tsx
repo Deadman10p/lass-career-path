@@ -102,14 +102,60 @@ export default function ResultsPage() {
 
   const downloadPdf = async () => {
     if (!printRef.current) return;
-    const html2pdf = (await import("html2pdf.js")).default;
-    await html2pdf().set({
-      margin: [10, 10, 10, 10],
-      filename: `lass-results-${(profile?.full_name ?? "student").replace(/\s+/g, "-")}.pdf`,
-      image: { type: "jpeg", quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-    }).from(printRef.current).save();
+    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+      import("html2canvas"),
+      import("jspdf"),
+    ]);
+
+    const A4_W = 210, A4_H = 297, MARGIN = 10;
+    const CONTENT_W = A4_W - MARGIN * 2;
+    const PAGE_H = A4_H - MARGIN * 2;
+    const GAP = 3;
+
+    const sections = Array.from(
+      printRef.current.querySelectorAll<HTMLElement>("[data-pdf-section]")
+    );
+    const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+    let y = MARGIN;
+    let first = true;
+
+    for (const section of sections) {
+      const canvas = await html2canvas(section, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
+      const hMM = (canvas.height * CONTENT_W) / canvas.width;
+
+      // If a single section is taller than a full page, slice it across pages.
+      if (hMM > PAGE_H) {
+        const pageHeightPx = (PAGE_H * canvas.width) / CONTENT_W;
+        let offsetPx = 0;
+        while (offsetPx < canvas.height) {
+          const sliceHpx = Math.min(pageHeightPx, canvas.height - offsetPx);
+          const slice = document.createElement("canvas");
+          slice.width = canvas.width;
+          slice.height = sliceHpx;
+          const ctx = slice.getContext("2d")!;
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, slice.width, slice.height);
+          ctx.drawImage(canvas, 0, offsetPx, canvas.width, sliceHpx, 0, 0, canvas.width, sliceHpx);
+          if (!first) pdf.addPage();
+          first = false;
+          const sliceHmm = (sliceHpx * CONTENT_W) / canvas.width;
+          pdf.addImage(slice.toDataURL("image/jpeg", 0.95), "JPEG", MARGIN, MARGIN, CONTENT_W, sliceHmm);
+          offsetPx += sliceHpx;
+          y = MARGIN + sliceHmm + GAP;
+        }
+        continue;
+      }
+
+      if (!first && y + hMM > MARGIN + PAGE_H) {
+        pdf.addPage();
+        y = MARGIN;
+      }
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", MARGIN, y, CONTENT_W, hMM);
+      y += hMM + GAP;
+      first = false;
+    }
+
+    pdf.save(`lass-results-${(profile?.full_name ?? "student").replace(/\s+/g, "-")}.pdf`);
   };
 
   if (loading) {
