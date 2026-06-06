@@ -7,18 +7,46 @@ const corsHeaders = {
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
+    // --- AuthN: verify JWT ---
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    if (!token) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+    const { data: userData, error: userErr } = await userClient.auth.getUser(token);
+    if (userErr || !userData?.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const authUserId = userData.user.id;
+
     const { response_id } = await req.json();
-    if (!response_id) throw new Error("response_id required");
+    if (!response_id) {
+      return new Response(JSON.stringify({ error: "response_id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const { data: resp } = await sb.from("responses").select("*").eq("id", response_id).maybeSingle();
-    if (!resp) throw new Error("response not found");
+    if (!resp) {
+      return new Response(JSON.stringify({ error: "Not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // --- AuthZ: caller must own the response OR be a setter ---
+    const { data: callerProfile } = await sb.from("profiles").select("user_id, role").eq("user_id", authUserId).maybeSingle();
+    const isOwner = resp.student_id === authUserId;
+    const isSetter = callerProfile?.role === "setter";
+    if (!isOwner && !isSetter) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     const [{ data: results }, { data: answers }, { data: qcRows }, { data: q }] = await Promise.all([
       sb.from("results").select("*").eq("response_id", response_id),
@@ -37,7 +65,6 @@ Deno.serve(async (req) => {
       .sort((a: any, b: any) => b.total_score - a.total_score);
     const top3 = ranked.slice(0, 3);
 
-    // Build a per-cluster label list pulled from EITHER profile_data (new) OR profile_attributes (legacy) OR questionnaire profile_schema (fallback)
     const clusterLabels = (c: any): string[] => {
       const fromData = Array.isArray(c.profile_data) ? c.profile_data.map((p: any) => String(p?.label ?? "").trim()).filter(Boolean) : [];
       if (fromData.length) return fromData;
@@ -112,7 +139,6 @@ Never repeat the cluster name as filler. Never start two entries with the same w
     const weaknesses: string[] = [];
     const growth: string[] = [];
     const inventories: any[] = [];
-    /** Dynamic aggregation: { [label]: string[] } across every label the AI ever produced for this student. */
     const dynamic: Record<string, string[]> = {};
 
     for (const r of allResp ?? []) {
@@ -136,7 +162,6 @@ Never repeat the cluster name as filler. Never start two entries with the same w
           const text = String(val ?? "").trim();
           if (!text) continue;
           (dynamic[label] ||= []).push(text);
-          // Back-compat buckets
           if (label === "Strengths") strengths.push(text);
           else if (label === "Weaknesses") weaknesses.push(text);
           else if (label === "Growth Tips") growth.push(text);
@@ -144,7 +169,6 @@ Never repeat the cluster name as filler. Never start two entries with the same w
       }
     }
 
-    // Cross-inventory alignment via AI
     let alignments: string[] = [];
     if (inventories.length >= 2) {
       const alignRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -173,6 +197,7 @@ Never repeat the cluster name as filler. Never start two entries with the same w
 
     return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    console.error("synthesize-profile error:", e);
+    return new Response(JSON.stringify({ error: "Internal server error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
