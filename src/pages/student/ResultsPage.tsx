@@ -368,8 +368,8 @@ export default function ResultsPage() {
           </section>
         )}
 
-        {/* ALL CATEGORIES with custom bars */}
-        <section data-pdf-section className="rounded-2xl border border-border bg-card p-6 shadow-card">
+        {/* ALL CATEGORIES with custom bars (screen only) */}
+        <section className="rounded-2xl border border-border bg-card p-6 shadow-card">
           <h3 className="mb-4 font-serif-display text-2xl">All categories ranked</h3>
           <ul className="space-y-4">
             {ranked.map((r, i) => (
@@ -390,9 +390,9 @@ export default function ResultsPage() {
           </ul>
         </section>
 
-        {/* LETTERED SECTIONS — debiased headers */}
+        {/* LETTERED SECTIONS (screen only) */}
         {doc && doc.sections.length > 0 && (
-          <section data-pdf-section className="rounded-2xl border border-border bg-card p-6 shadow-card">
+          <section className="rounded-2xl border border-border bg-card p-6 shadow-card">
             <h3 className="mb-4 font-serif-display text-2xl">Inventory map</h3>
             <ol className="space-y-3">
               {doc.sections.map((sec, i) => (
