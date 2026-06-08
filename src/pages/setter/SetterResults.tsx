@@ -422,6 +422,28 @@ export default function SetterResults() {
           ))}
         </div>
       )}
+
+      {/* Hidden off-screen mount used by the bulk PDF exporter. Renders one report at a time. */}
+      {bulkRunning && bulkQueue[bulkIndex] && (
+        <div
+          aria-hidden
+          style={{
+            position: "fixed",
+            left: "-10000px",
+            top: 0,
+            width: 920,
+            pointerEvents: "none",
+            opacity: 0,
+          }}
+        >
+          <StudentReportPDFView
+            key={bulkQueue[bulkIndex].response_id}
+            responseId={bulkQueue[bulkIndex].response_id}
+            onReady={handleBulkReady}
+            onError={handleBulkError}
+          />
+        </div>
+      )}
     </PageShell>
   );
 }
