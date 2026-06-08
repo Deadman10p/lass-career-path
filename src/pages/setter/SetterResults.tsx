@@ -433,7 +433,6 @@ export default function SetterResults() {
             top: 0,
             width: 920,
             pointerEvents: "none",
-            opacity: 0,
           }}
         >
           <StudentReportPDFView
