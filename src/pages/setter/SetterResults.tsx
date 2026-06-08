@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { PageShell } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,10 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import type { CareerCluster } from "@/lib/types";
-import { Download, Search, Users, Trophy, Filter, BarChart3, Eye, TrendingUp } from "lucide-react";
+import { Download, Search, Users, Trophy, Filter, BarChart3, Eye, TrendingUp, FileArchive, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import StudentReportPDFView, { type StudentReportPDFMeta } from "@/components/StudentReportPDFView";
+import { exportNodeToPdf } from "@/lib/pdfExport";
 
 interface ResultsRow {
   response_id: string;
@@ -167,6 +169,110 @@ export default function SetterResults() {
     URL.revokeObjectURL(url);
   };
 
+  // ----- Bulk PDF export -----
+  type BulkItem = {
+    response_id: string;
+    full_name: string;
+    class_name: string | null;
+    stream: string | null;
+    questionnaire_title: string;
+  };
+  const [bulkQueue, setBulkQueue] = useState<BulkItem[]>([]);
+  const [bulkIndex, setBulkIndex] = useState(0);
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const bulkRef = useRef<{ zip: any; failures: string[] } | null>(null);
+
+  const sanitize = (s: string) => s.replace(/[^a-z0-9-_.]+/gi, "_").replace(/_+/g, "_").replace(/^_|_$/g, "") || "report";
+
+  const startBulkExport = async () => {
+    if (!filtered.length) { toast.error("Nothing to export with the current filters."); return; }
+    if (bulkRunning) return;
+    try {
+      const { default: JSZip } = await import("jszip");
+      bulkRef.current = { zip: new JSZip(), failures: [] };
+      const queue: BulkItem[] = filtered.map(r => ({
+        response_id: r.response_id,
+        full_name: r.full_name,
+        class_name: r.class_name,
+        stream: r.stream,
+        questionnaire_title: r.questionnaire_title,
+      }));
+      setBulkQueue(queue);
+      setBulkIndex(0);
+      setBulkRunning(true);
+      toast.info(`Preparing ${queue.length} PDF${queue.length === 1 ? "" : "s"}…`);
+    } catch (e) {
+      toast.error("Could not initialise bulk export.");
+    }
+  };
+
+  const finishBulkExport = useCallback(async () => {
+    const state = bulkRef.current;
+    if (!state) return;
+    try {
+      const blob = await state.zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `lass-reports-${new Date().toISOString().slice(0, 10)}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      if (state.failures.length) {
+        toast.warning(`Exported with ${state.failures.length} failure${state.failures.length === 1 ? "" : "s"}. See console for details.`);
+        // eslint-disable-next-line no-console
+        console.warn("Bulk export failures:", state.failures);
+      } else {
+        toast.success("All reports exported.");
+      }
+    } catch {
+      toast.error("Failed to assemble ZIP file.");
+    } finally {
+      bulkRef.current = null;
+      setBulkRunning(false);
+      setBulkQueue([]);
+      setBulkIndex(0);
+    }
+  }, []);
+
+  const handleBulkReady = useCallback(
+    async (node: HTMLDivElement, meta: StudentReportPDFMeta) => {
+      const state = bulkRef.current;
+      const current = bulkQueue[bulkIndex];
+      if (!state || !current) return;
+      try {
+        const pdfBlob = await exportNodeToPdf(node);
+        const folder = sanitize(current.class_name || "Unassigned");
+        const qFolder = sanitize(current.questionnaire_title || "Inventory");
+        const file = `${sanitize(meta.studentName)}-${current.response_id.slice(0, 8)}.pdf`;
+        state.zip.folder(folder)!.folder(qFolder)!.file(file, pdfBlob);
+      } catch (e: any) {
+        state.failures.push(`${current.full_name}: ${e?.message ?? "render failed"}`);
+      }
+      const next = bulkIndex + 1;
+      if (next >= bulkQueue.length) {
+        await finishBulkExport();
+      } else {
+        setBulkIndex(next);
+      }
+    },
+    [bulkIndex, bulkQueue, finishBulkExport],
+  );
+
+  const handleBulkError = useCallback(
+    (err: string) => {
+      const state = bulkRef.current;
+      const current = bulkQueue[bulkIndex];
+      if (state && current) state.failures.push(`${current.full_name}: ${err}`);
+      const next = bulkIndex + 1;
+      if (next >= bulkQueue.length) {
+        finishBulkExport();
+      } else {
+        setBulkIndex(next);
+      }
+    },
+    [bulkIndex, bulkQueue, finishBulkExport],
+  );
+
   return (
     <PageShell tone="setter" title="Counsellor Portal">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
@@ -174,9 +280,18 @@ export default function SetterResults() {
           <h1 className="font-display text-2xl font-semibold sm:text-3xl">Student Results</h1>
           <p className="text-sm text-muted-foreground">All submissions across the school. Filter by class, stream and questionnaire — open any student for a full report.</p>
         </div>
-        <Button onClick={exportCsv} size="sm" className="gradient-setter text-setter-foreground border-0 shadow-glow">
-          <Download className="mr-1.5 h-4 w-4" /> Export CSV
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={exportCsv} size="sm" variant="outline">
+            <Download className="mr-1.5 h-4 w-4" /> Export CSV
+          </Button>
+          <Button onClick={startBulkExport} size="sm" disabled={bulkRunning || !filtered.length} className="gradient-setter text-setter-foreground border-0 shadow-glow">
+            {bulkRunning ? (
+              <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Exporting {bulkIndex + 1}/{bulkQueue.length}…</>
+            ) : (
+              <><FileArchive className="mr-1.5 h-4 w-4" /> Download all PDFs (ZIP)</>
+            )}
+          </Button>
+        </div>
       </div>
 
       <div className="mb-5 grid gap-3 sm:grid-cols-3">
@@ -305,6 +420,27 @@ export default function SetterResults() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Hidden off-screen mount used by the bulk PDF exporter. Renders one report at a time. */}
+      {bulkRunning && bulkQueue[bulkIndex] && (
+        <div
+          aria-hidden
+          style={{
+            position: "fixed",
+            left: "-10000px",
+            top: 0,
+            width: 920,
+            pointerEvents: "none",
+          }}
+        >
+          <StudentReportPDFView
+            key={bulkQueue[bulkIndex].response_id}
+            responseId={bulkQueue[bulkIndex].response_id}
+            onReady={handleBulkReady}
+            onError={handleBulkError}
+          />
         </div>
       )}
     </PageShell>
