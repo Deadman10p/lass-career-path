@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { PageShell } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,10 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import type { CareerCluster } from "@/lib/types";
-import { Download, Search, Users, Trophy, Filter, BarChart3, Eye, TrendingUp } from "lucide-react";
+import { Download, Search, Users, Trophy, Filter, BarChart3, Eye, TrendingUp, FileArchive, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import StudentReportPDFView, { type StudentReportPDFMeta } from "@/components/StudentReportPDFView";
+import { exportNodeToPdf } from "@/lib/pdfExport";
 
 interface ResultsRow {
   response_id: string;
