@@ -160,14 +160,15 @@ export default function SetterResults() {
         const prof = profMap.get(r.student_id) as any;
         const className = prof?.class_name ?? null;
         const stream = prof?.stream ?? null;
+        const parsed = parseClassStream(className, stream);
         return {
           response_id: r.id,
           student_id: r.student_id,
           full_name: prof?.full_name ?? "Unknown student",
           class_name: className,
-          class_key: normaliseKey(className),
+          class_key: parsed.classKey,
           stream: stream,
-          stream_key: normaliseKey(stream),
+          stream_key: parsed.streamKey,
           questionnaire_id: r.questionnaire_id,
           questionnaire_title: qMap.get(r.questionnaire_id) ?? "Untitled questionnaire",
           submitted_at: r.submitted_at,
