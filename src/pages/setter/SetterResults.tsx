@@ -23,7 +23,9 @@ interface ResultsRow {
   student_id: string;
   full_name: string;
   class_name: string | null;
+  class_key: string | null;
   stream: string | null;
+  stream_key: string | null;
   questionnaire_id: string;
   questionnaire_title: string;
   submitted_at: string;
@@ -33,6 +35,40 @@ interface ResultsRow {
 }
 
 const ALL = "__ALL__";
+
+// Normalise free-text class/stream values so "S1C", "s1c", "s1.c", "S1 C" all
+// collapse to the same bucket for filtering, grouping and ZIP folder names.
+function normaliseKey(v: string | null | undefined): string | null {
+  if (!v) return null;
+  const k = v.toString().toUpperCase().replace(/[^A-Z0-9]+/g, "");
+  return k || null;
+}
+
+// Pick the most frequent original spelling for a given normalised key so the
+// UI shows a real label (e.g. "S1C") rather than the stripped key.
+function pickCanonicalLabels(values: Array<string | null>): Map<string, string> {
+  const counts = new Map<string, Map<string, number>>();
+  for (const v of values) {
+    const key = normaliseKey(v);
+    if (!key || !v) continue;
+    if (!counts.has(key)) counts.set(key, new Map());
+    const inner = counts.get(key)!;
+    inner.set(v, (inner.get(v) ?? 0) + 1);
+  }
+  const out = new Map<string, string>();
+  counts.forEach((inner, key) => {
+    let bestLabel = key;
+    let bestCount = -1;
+    inner.forEach((c, label) => {
+      if (c > bestCount || (c === bestCount && label.length > bestLabel.length)) {
+        bestCount = c;
+        bestLabel = label;
+      }
+    });
+    out.set(key, bestLabel);
+  });
+  return out;
+}
 
 export default function SetterResults() {
   const [loading, setLoading] = useState(true);
