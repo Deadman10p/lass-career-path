@@ -378,7 +378,7 @@ export default function SetterResults() {
             <SelectTrigger><SelectValue placeholder="All streams" /></SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>All streams</SelectItem>
-              {streams.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              {streams.map(s => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={questionnaireFilter} onValueChange={setQuestionnaireFilter}>
