@@ -307,7 +307,8 @@ export default function SetterResults() {
       if (!state || !current) return;
       try {
         const pdfBlob = await exportNodeToPdf(node);
-        const folder = sanitize(current.class_name || "Unassigned");
+        const classLabel = current.class_key ? (classLabelByKey.get(current.class_key) ?? current.class_name ?? "Unassigned") : "Unassigned";
+        const folder = sanitize(classLabel);
         const qFolder = sanitize(current.questionnaire_title || "Inventory");
         const file = `${sanitize(meta.studentName)}-${current.response_id.slice(0, 8)}.pdf`;
         state.zip.folder(folder)!.folder(qFolder)!.file(file, pdfBlob);
