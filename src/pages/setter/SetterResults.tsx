@@ -439,13 +439,13 @@ export default function SetterResults() {
         </div>
       ) : (
         <div className="space-y-5">
-          {grouped.map(([groupKey, list]) => (
+          {grouped.map(([groupKey, groupLabel, list]) => (
             <div key={groupKey} className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
               <div className="flex items-center justify-between border-b border-border bg-secondary/40 p-4 sm:p-5">
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-setter text-setter-foreground text-xs font-semibold">{list.length}</div>
                   <div>
-                    <h3 className="font-display font-semibold">{groupKey}</h3>
+                    <h3 className="font-display font-semibold">{groupLabel}</h3>
                     <p className="text-xs text-muted-foreground">{list.length} submission{list.length === 1 ? "" : "s"}</p>
                   </div>
                 </div>
