@@ -23,7 +23,9 @@ interface ResultsRow {
   student_id: string;
   full_name: string;
   class_name: string | null;
+  class_key: string | null;
   stream: string | null;
+  stream_key: string | null;
   questionnaire_id: string;
   questionnaire_title: string;
   submitted_at: string;
@@ -33,6 +35,40 @@ interface ResultsRow {
 }
 
 const ALL = "__ALL__";
+
+// Normalise free-text class/stream values so "S1C", "s1c", "s1.c", "S1 C" all
+// collapse to the same bucket for filtering, grouping and ZIP folder names.
+function normaliseKey(v: string | null | undefined): string | null {
+  if (!v) return null;
+  const k = v.toString().toUpperCase().replace(/[^A-Z0-9]+/g, "");
+  return k || null;
+}
+
+// Pick the most frequent original spelling for a given normalised key so the
+// UI shows a real label (e.g. "S1C") rather than the stripped key.
+function pickCanonicalLabels(values: Array<string | null>): Map<string, string> {
+  const counts = new Map<string, Map<string, number>>();
+  for (const v of values) {
+    const key = normaliseKey(v);
+    if (!key || !v) continue;
+    if (!counts.has(key)) counts.set(key, new Map());
+    const inner = counts.get(key)!;
+    inner.set(v, (inner.get(v) ?? 0) + 1);
+  }
+  const out = new Map<string, string>();
+  counts.forEach((inner, key) => {
+    let bestLabel = key;
+    let bestCount = -1;
+    inner.forEach((c, label) => {
+      if (c > bestCount || (c === bestCount && label.length > bestLabel.length)) {
+        bestCount = c;
+        bestLabel = label;
+      }
+    });
+    out.set(key, bestLabel);
+  });
+  return out;
+}
 
 export default function SetterResults() {
   const [loading, setLoading] = useState(true);
@@ -77,12 +113,16 @@ export default function SetterResults() {
         const sorted = [...myResults].sort((a, b) => b.total_score - a.total_score);
         const top = sorted[0];
         const prof = profMap.get(r.student_id) as any;
+        const className = prof?.class_name ?? null;
+        const stream = prof?.stream ?? null;
         return {
           response_id: r.id,
           student_id: r.student_id,
           full_name: prof?.full_name ?? "Unknown student",
-          class_name: prof?.class_name ?? null,
-          stream: prof?.stream ?? null,
+          class_name: className,
+          class_key: normaliseKey(className),
+          stream: stream,
+          stream_key: normaliseKey(stream),
           questionnaire_id: r.questionnaire_id,
           questionnaire_title: qMap.get(r.questionnaire_id) ?? "Untitled questionnaire",
           submitted_at: r.submitted_at,
@@ -97,8 +137,23 @@ export default function SetterResults() {
     })();
   }, []);
 
-  const classes = useMemo(() => Array.from(new Set(rows.map(r => r.class_name).filter(Boolean))) as string[], [rows]);
-  const streams = useMemo(() => Array.from(new Set(rows.map(r => r.stream).filter(Boolean))) as string[], [rows]);
+  const classLabelByKey = useMemo(() => pickCanonicalLabels(rows.map(r => r.class_name)), [rows]);
+  const streamLabelByKey = useMemo(() => pickCanonicalLabels(rows.map(r => r.stream)), [rows]);
+
+  const classes = useMemo(() => {
+    const keys = Array.from(new Set(rows.map(r => r.class_key).filter(Boolean))) as string[];
+    return keys
+      .map(k => ({ key: k, label: classLabelByKey.get(k) ?? k }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [rows, classLabelByKey]);
+
+  const streams = useMemo(() => {
+    const keys = Array.from(new Set(rows.map(r => r.stream_key).filter(Boolean))) as string[];
+    return keys
+      .map(k => ({ key: k, label: streamLabelByKey.get(k) ?? k }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [rows, streamLabelByKey]);
+
   const questionnaires = useMemo(() => {
     const m = new Map<string, string>();
     rows.forEach(r => m.set(r.questionnaire_id, r.questionnaire_title));
@@ -108,8 +163,8 @@ export default function SetterResults() {
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
     return rows.filter(r => {
-      if (classFilter !== ALL && r.class_name !== classFilter) return false;
-      if (streamFilter !== ALL && r.stream !== streamFilter) return false;
+      if (classFilter !== ALL && r.class_key !== classFilter) return false;
+      if (streamFilter !== ALL && r.stream_key !== streamFilter) return false;
       if (questionnaireFilter !== ALL && r.questionnaire_id !== questionnaireFilter) return false;
       if (s && !r.full_name.toLowerCase().includes(s)) return false;
       return true;
@@ -117,14 +172,21 @@ export default function SetterResults() {
   }, [rows, classFilter, streamFilter, questionnaireFilter, search]);
 
   const grouped = useMemo(() => {
-    const out = new Map<string, ResultsRow[]>();
+    const out = new Map<string, { label: string; rows: ResultsRow[] }>();
     filtered.forEach(r => {
-      const key = `${r.class_name ?? "—"} · ${r.stream ?? "—"}`;
-      if (!out.has(key)) out.set(key, []);
-      out.get(key)!.push(r);
+      const ck = r.class_key ?? "__NONE__";
+      const sk = r.stream_key ?? "__NONE__";
+      const key = `${ck}::${sk}`;
+      const classLabel = r.class_key ? (classLabelByKey.get(r.class_key) ?? r.class_name ?? "—") : "—";
+      const streamLabel = r.stream_key ? (streamLabelByKey.get(r.stream_key) ?? r.stream ?? "—") : "—";
+      const label = `${classLabel} · ${streamLabel}`;
+      if (!out.has(key)) out.set(key, { label, rows: [] });
+      out.get(key)!.rows.push(r);
     });
-    return Array.from(out.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [filtered]);
+    return Array.from(out.entries())
+      .map(([k, v]) => [k, v.label, v.rows] as const)
+      .sort((a, b) => a[1].localeCompare(b[1]));
+  }, [filtered, classLabelByKey, streamLabelByKey]);
 
   const topClusterCounts = useMemo(() => {
     const m: Record<string, number> = {};
@@ -174,7 +236,9 @@ export default function SetterResults() {
     response_id: string;
     full_name: string;
     class_name: string | null;
+    class_key: string | null;
     stream: string | null;
+    stream_key: string | null;
     questionnaire_title: string;
   };
   const [bulkQueue, setBulkQueue] = useState<BulkItem[]>([]);
@@ -194,7 +258,9 @@ export default function SetterResults() {
         response_id: r.response_id,
         full_name: r.full_name,
         class_name: r.class_name,
+        class_key: r.class_key,
         stream: r.stream,
+        stream_key: r.stream_key,
         questionnaire_title: r.questionnaire_title,
       }));
       setBulkQueue(queue);
@@ -241,7 +307,8 @@ export default function SetterResults() {
       if (!state || !current) return;
       try {
         const pdfBlob = await exportNodeToPdf(node);
-        const folder = sanitize(current.class_name || "Unassigned");
+        const classLabel = current.class_key ? (classLabelByKey.get(current.class_key) ?? current.class_name ?? "Unassigned") : "Unassigned";
+        const folder = sanitize(classLabel);
         const qFolder = sanitize(current.questionnaire_title || "Inventory");
         const file = `${sanitize(meta.studentName)}-${current.response_id.slice(0, 8)}.pdf`;
         state.zip.folder(folder)!.folder(qFolder)!.file(file, pdfBlob);
@@ -255,7 +322,7 @@ export default function SetterResults() {
         setBulkIndex(next);
       }
     },
-    [bulkIndex, bulkQueue, finishBulkExport],
+    [bulkIndex, bulkQueue, finishBulkExport, classLabelByKey],
   );
 
   const handleBulkError = useCallback(
@@ -297,7 +364,7 @@ export default function SetterResults() {
       <div className="mb-5 grid gap-3 sm:grid-cols-3">
         <StatCard icon={<Users className="h-4 w-4" />} label="Total submissions" value={filtered.length} loading={loading} />
         <StatCard icon={<Trophy className="h-4 w-4" />} label="Most common top category" valueLabel={topClusterCounts[0]?.[0] ?? "—"} loading={loading} />
-        <StatCard icon={<BarChart3 className="h-4 w-4" />} label="Distinct classes" value={new Set(filtered.map(r => r.class_name).filter(Boolean)).size} loading={loading} />
+        <StatCard icon={<BarChart3 className="h-4 w-4" />} label="Distinct classes" value={new Set(filtered.map(r => r.class_key).filter(Boolean)).size} loading={loading} />
       </div>
 
       <div className="mb-4 rounded-2xl border border-border bg-card p-4 shadow-card">
@@ -309,14 +376,14 @@ export default function SetterResults() {
             <SelectTrigger><SelectValue placeholder="All classes" /></SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>All classes</SelectItem>
-              {classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              {classes.map(c => <SelectItem key={c.key} value={c.key}>{c.label}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={streamFilter} onValueChange={setStreamFilter}>
             <SelectTrigger><SelectValue placeholder="All streams" /></SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>All streams</SelectItem>
-              {streams.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              {streams.map(s => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={questionnaireFilter} onValueChange={setQuestionnaireFilter}>
@@ -377,13 +444,13 @@ export default function SetterResults() {
         </div>
       ) : (
         <div className="space-y-5">
-          {grouped.map(([groupKey, list]) => (
+          {grouped.map(([groupKey, groupLabel, list]) => (
             <div key={groupKey} className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
               <div className="flex items-center justify-between border-b border-border bg-secondary/40 p-4 sm:p-5">
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-setter text-setter-foreground text-xs font-semibold">{list.length}</div>
                   <div>
-                    <h3 className="font-display font-semibold">{groupKey}</h3>
+                    <h3 className="font-display font-semibold">{groupLabel}</h3>
                     <p className="text-xs text-muted-foreground">{list.length} submission{list.length === 1 ? "" : "s"}</p>
                   </div>
                 </div>
