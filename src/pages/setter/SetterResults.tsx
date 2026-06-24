@@ -236,7 +236,9 @@ export default function SetterResults() {
     response_id: string;
     full_name: string;
     class_name: string | null;
+    class_key: string | null;
     stream: string | null;
+    stream_key: string | null;
     questionnaire_title: string;
   };
   const [bulkQueue, setBulkQueue] = useState<BulkItem[]>([]);
@@ -256,7 +258,9 @@ export default function SetterResults() {
         response_id: r.response_id,
         full_name: r.full_name,
         class_name: r.class_name,
+        class_key: r.class_key,
         stream: r.stream,
+        stream_key: r.stream_key,
         questionnaire_title: r.questionnaire_title,
       }));
       setBulkQueue(queue);
