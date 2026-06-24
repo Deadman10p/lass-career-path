@@ -364,7 +364,7 @@ export default function SetterResults() {
       <div className="mb-5 grid gap-3 sm:grid-cols-3">
         <StatCard icon={<Users className="h-4 w-4" />} label="Total submissions" value={filtered.length} loading={loading} />
         <StatCard icon={<Trophy className="h-4 w-4" />} label="Most common top category" valueLabel={topClusterCounts[0]?.[0] ?? "—"} loading={loading} />
-        <StatCard icon={<BarChart3 className="h-4 w-4" />} label="Distinct classes" value={new Set(filtered.map(r => r.class_name).filter(Boolean)).size} loading={loading} />
+        <StatCard icon={<BarChart3 className="h-4 w-4" />} label="Distinct classes" value={new Set(filtered.map(r => r.class_key).filter(Boolean)).size} loading={loading} />
       </div>
 
       <div className="mb-4 rounded-2xl border border-border bg-card p-4 shadow-card">
