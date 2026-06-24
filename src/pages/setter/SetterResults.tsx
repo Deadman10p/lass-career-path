@@ -44,6 +44,51 @@ function normaliseKey(v: string | null | undefined): string | null {
   return k || null;
 }
 
+// Parse a Ugandan secondary school class/stream pair from messy free-text.
+// Handles inputs like "S1C", "s1.c", "S1 C", "Senior 1 C", "S.1C", with the
+// stream possibly living in either the class field or the stream field.
+// Returns canonical { classKey: "S1".."S6"|null, streamKey: "A".."Z"|null }.
+function parseClassStream(
+  rawClass: string | null | undefined,
+  rawStream: string | null | undefined,
+): { classKey: string | null; streamKey: string | null } {
+  const cls = (rawClass ?? "").toString().toUpperCase();
+  const strm = (rawStream ?? "").toString().toUpperCase();
+  const combined = `${cls} ${strm}`;
+
+  // Look for senior level: S1..S6, also accept "SENIOR 1" etc.
+  let level: string | null = null;
+  const senior = combined.match(/SENIOR\s*([1-6])/);
+  if (senior) {
+    level = `S${senior[1]}`;
+  } else {
+    const m = combined.match(/S\s*\.?\s*([1-6])/);
+    if (m) level = `S${m[1]}`;
+  }
+
+  // Stream letter: prefer the explicit stream field first, otherwise grab
+  // the first standalone A–Z letter that appears AFTER the level token.
+  let stream: string | null = null;
+  const streamFromField = strm.replace(/[^A-Z]/g, "");
+  if (streamFromField.length === 1) {
+    stream = streamFromField;
+  } else if (streamFromField.length > 1) {
+    stream = streamFromField[0];
+  } else if (level) {
+    // Strip the level token from the combined string, then take first letter.
+    const tail = combined
+      .replace(/SENIOR\s*[1-6]/, "")
+      .replace(/S\s*\.?\s*[1-6]/, "")
+      .replace(/[^A-Z]/g, "");
+    if (tail.length) stream = tail[0];
+  }
+
+  // Fallback: if we couldn't detect a senior level, use the normalised raw
+  // class as the class key so unusual labels still group consistently.
+  const classKey = level ?? normaliseKey(rawClass);
+  return { classKey, streamKey: stream };
+}
+
 // Pick the most frequent original spelling for a given normalised key so the
 // UI shows a real label (e.g. "S1C") rather than the stripped key.
 function pickCanonicalLabels(values: Array<string | null>): Map<string, string> {
@@ -115,14 +160,15 @@ export default function SetterResults() {
         const prof = profMap.get(r.student_id) as any;
         const className = prof?.class_name ?? null;
         const stream = prof?.stream ?? null;
+        const parsed = parseClassStream(className, stream);
         return {
           response_id: r.id,
           student_id: r.student_id,
           full_name: prof?.full_name ?? "Unknown student",
           class_name: className,
-          class_key: normaliseKey(className),
+          class_key: parsed.classKey,
           stream: stream,
-          stream_key: normaliseKey(stream),
+          stream_key: parsed.streamKey,
           questionnaire_id: r.questionnaire_id,
           questionnaire_title: qMap.get(r.questionnaire_id) ?? "Untitled questionnaire",
           submitted_at: r.submitted_at,
@@ -137,14 +183,30 @@ export default function SetterResults() {
     })();
   }, []);
 
-  const classLabelByKey = useMemo(() => pickCanonicalLabels(rows.map(r => r.class_name)), [rows]);
-  const streamLabelByKey = useMemo(() => pickCanonicalLabels(rows.map(r => r.stream)), [rows]);
+  // Build display labels keyed by our canonical class/stream keys. For S1..S6
+  // the key itself is already a clean label; for anything else we surface the
+  // most common raw spelling so unfamiliar entries still look natural.
+  const classLabelByKey = useMemo(() => {
+    const m = new Map<string, string>();
+    rows.forEach(r => {
+      if (!r.class_key) return;
+      if (/^S[1-6]$/.test(r.class_key)) { m.set(r.class_key, r.class_key); return; }
+      if (!m.has(r.class_key) && r.class_name) m.set(r.class_key, r.class_name);
+    });
+    return m;
+  }, [rows]);
+
+  const streamLabelByKey = useMemo(() => {
+    const m = new Map<string, string>();
+    rows.forEach(r => { if (r.stream_key) m.set(r.stream_key, r.stream_key); });
+    return m;
+  }, [rows]);
 
   const classes = useMemo(() => {
     const keys = Array.from(new Set(rows.map(r => r.class_key).filter(Boolean))) as string[];
     return keys
       .map(k => ({ key: k, label: classLabelByKey.get(k) ?? k }))
-      .sort((a, b) => a.label.localeCompare(b.label));
+      .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
   }, [rows, classLabelByKey]);
 
   const streams = useMemo(() => {
