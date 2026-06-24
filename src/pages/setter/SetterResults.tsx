@@ -322,7 +322,7 @@ export default function SetterResults() {
         setBulkIndex(next);
       }
     },
-    [bulkIndex, bulkQueue, finishBulkExport],
+    [bulkIndex, bulkQueue, finishBulkExport, classLabelByKey],
   );
 
   const handleBulkError = useCallback(
