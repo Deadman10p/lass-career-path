@@ -137,8 +137,23 @@ export default function SetterResults() {
     })();
   }, []);
 
-  const classes = useMemo(() => Array.from(new Set(rows.map(r => r.class_name).filter(Boolean))) as string[], [rows]);
-  const streams = useMemo(() => Array.from(new Set(rows.map(r => r.stream).filter(Boolean))) as string[], [rows]);
+  const classLabelByKey = useMemo(() => pickCanonicalLabels(rows.map(r => r.class_name)), [rows]);
+  const streamLabelByKey = useMemo(() => pickCanonicalLabels(rows.map(r => r.stream)), [rows]);
+
+  const classes = useMemo(() => {
+    const keys = Array.from(new Set(rows.map(r => r.class_key).filter(Boolean))) as string[];
+    return keys
+      .map(k => ({ key: k, label: classLabelByKey.get(k) ?? k }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [rows, classLabelByKey]);
+
+  const streams = useMemo(() => {
+    const keys = Array.from(new Set(rows.map(r => r.stream_key).filter(Boolean))) as string[];
+    return keys
+      .map(k => ({ key: k, label: streamLabelByKey.get(k) ?? k }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [rows, streamLabelByKey]);
+
   const questionnaires = useMemo(() => {
     const m = new Map<string, string>();
     rows.forEach(r => m.set(r.questionnaire_id, r.questionnaire_title));
@@ -148,8 +163,8 @@ export default function SetterResults() {
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
     return rows.filter(r => {
-      if (classFilter !== ALL && r.class_name !== classFilter) return false;
-      if (streamFilter !== ALL && r.stream !== streamFilter) return false;
+      if (classFilter !== ALL && r.class_key !== classFilter) return false;
+      if (streamFilter !== ALL && r.stream_key !== streamFilter) return false;
       if (questionnaireFilter !== ALL && r.questionnaire_id !== questionnaireFilter) return false;
       if (s && !r.full_name.toLowerCase().includes(s)) return false;
       return true;
@@ -157,14 +172,21 @@ export default function SetterResults() {
   }, [rows, classFilter, streamFilter, questionnaireFilter, search]);
 
   const grouped = useMemo(() => {
-    const out = new Map<string, ResultsRow[]>();
+    const out = new Map<string, { label: string; rows: ResultsRow[] }>();
     filtered.forEach(r => {
-      const key = `${r.class_name ?? "—"} · ${r.stream ?? "—"}`;
-      if (!out.has(key)) out.set(key, []);
-      out.get(key)!.push(r);
+      const ck = r.class_key ?? "__NONE__";
+      const sk = r.stream_key ?? "__NONE__";
+      const key = `${ck}::${sk}`;
+      const classLabel = r.class_key ? (classLabelByKey.get(r.class_key) ?? r.class_name ?? "—") : "—";
+      const streamLabel = r.stream_key ? (streamLabelByKey.get(r.stream_key) ?? r.stream ?? "—") : "—";
+      const label = `${classLabel} · ${streamLabel}`;
+      if (!out.has(key)) out.set(key, { label, rows: [] });
+      out.get(key)!.rows.push(r);
     });
-    return Array.from(out.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [filtered]);
+    return Array.from(out.entries())
+      .map(([k, v]) => [k, v.label, v.rows] as const)
+      .sort((a, b) => a[1].localeCompare(b[1]));
+  }, [filtered, classLabelByKey, streamLabelByKey]);
 
   const topClusterCounts = useMemo(() => {
     const m: Record<string, number> = {};
