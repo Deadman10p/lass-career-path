@@ -183,14 +183,30 @@ export default function SetterResults() {
     })();
   }, []);
 
-  const classLabelByKey = useMemo(() => pickCanonicalLabels(rows.map(r => r.class_name)), [rows]);
-  const streamLabelByKey = useMemo(() => pickCanonicalLabels(rows.map(r => r.stream)), [rows]);
+  // Build display labels keyed by our canonical class/stream keys. For S1..S6
+  // the key itself is already a clean label; for anything else we surface the
+  // most common raw spelling so unfamiliar entries still look natural.
+  const classLabelByKey = useMemo(() => {
+    const m = new Map<string, string>();
+    rows.forEach(r => {
+      if (!r.class_key) return;
+      if (/^S[1-6]$/.test(r.class_key)) { m.set(r.class_key, r.class_key); return; }
+      if (!m.has(r.class_key) && r.class_name) m.set(r.class_key, r.class_name);
+    });
+    return m;
+  }, [rows]);
+
+  const streamLabelByKey = useMemo(() => {
+    const m = new Map<string, string>();
+    rows.forEach(r => { if (r.stream_key) m.set(r.stream_key, r.stream_key); });
+    return m;
+  }, [rows]);
 
   const classes = useMemo(() => {
     const keys = Array.from(new Set(rows.map(r => r.class_key).filter(Boolean))) as string[];
     return keys
       .map(k => ({ key: k, label: classLabelByKey.get(k) ?? k }))
-      .sort((a, b) => a.label.localeCompare(b.label));
+      .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
   }, [rows, classLabelByKey]);
 
   const streams = useMemo(() => {
