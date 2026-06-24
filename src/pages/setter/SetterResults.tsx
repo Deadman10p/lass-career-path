@@ -44,6 +44,51 @@ function normaliseKey(v: string | null | undefined): string | null {
   return k || null;
 }
 
+// Parse a Ugandan secondary school class/stream pair from messy free-text.
+// Handles inputs like "S1C", "s1.c", "S1 C", "Senior 1 C", "S.1C", with the
+// stream possibly living in either the class field or the stream field.
+// Returns canonical { classKey: "S1".."S6"|null, streamKey: "A".."Z"|null }.
+function parseClassStream(
+  rawClass: string | null | undefined,
+  rawStream: string | null | undefined,
+): { classKey: string | null; streamKey: string | null } {
+  const cls = (rawClass ?? "").toString().toUpperCase();
+  const strm = (rawStream ?? "").toString().toUpperCase();
+  const combined = `${cls} ${strm}`;
+
+  // Look for senior level: S1..S6, also accept "SENIOR 1" etc.
+  let level: string | null = null;
+  const senior = combined.match(/SENIOR\s*([1-6])/);
+  if (senior) {
+    level = `S${senior[1]}`;
+  } else {
+    const m = combined.match(/S\s*\.?\s*([1-6])/);
+    if (m) level = `S${m[1]}`;
+  }
+
+  // Stream letter: prefer the explicit stream field first, otherwise grab
+  // the first standalone A–Z letter that appears AFTER the level token.
+  let stream: string | null = null;
+  const streamFromField = strm.replace(/[^A-Z]/g, "");
+  if (streamFromField.length === 1) {
+    stream = streamFromField;
+  } else if (streamFromField.length > 1) {
+    stream = streamFromField[0];
+  } else if (level) {
+    // Strip the level token from the combined string, then take first letter.
+    const tail = combined
+      .replace(/SENIOR\s*[1-6]/, "")
+      .replace(/S\s*\.?\s*[1-6]/, "")
+      .replace(/[^A-Z]/g, "");
+    if (tail.length) stream = tail[0];
+  }
+
+  // Fallback: if we couldn't detect a senior level, use the normalised raw
+  // class as the class key so unusual labels still group consistently.
+  const classKey = level ?? normaliseKey(rawClass);
+  return { classKey, streamKey: stream };
+}
+
 // Pick the most frequent original spelling for a given normalised key so the
 // UI shows a real label (e.g. "S1C") rather than the stripped key.
 function pickCanonicalLabels(values: Array<string | null>): Map<string, string> {
