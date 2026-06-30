@@ -361,6 +361,55 @@ export default function ResultsPage() {
           );
         })()}
 
+        {/* SECONDARY CATEGORY — insights stack from #2 cluster */}
+        {ranked.length > 1 && (() => {
+          const second = ranked[1];
+          const aiAttrs = insight?.by_cluster?.[second.cluster.id] as Record<string, string> | undefined;
+          const data = getProfileData(second.cluster, aiAttrs);
+          if (!data.length) return null;
+          return (
+            <section data-pdf-section className="lass-fade-up-4 space-y-4">
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <h3 className="font-serif-display text-2xl">Secondary category</h3>
+                  <p className="text-xs text-muted-foreground">Where your interests also pull — a real, weighted part of your profile.</p>
+                </div>
+                <span className="text-xs text-muted-foreground">{second.cluster.icon_emoji} {second.cluster.name}</span>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {data.map((d, i) => (
+                  <motion.article
+                    key={`sec-${d.label}-${i}`}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.06, duration: 0.5 }}
+                    className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-card transition-shadow hover:shadow-elevated"
+                  >
+                    <div className="absolute -right-10 -top-10 h-24 w-24 rounded-full bg-[hsl(var(--brand-red))]/8 blur-2xl" />
+                    <div className="relative">
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[hsl(var(--brand-red))]">{d.label}</div>
+                      <p className="mt-2 text-sm leading-relaxed text-foreground/90">{d.content}</p>
+                    </div>
+                  </motion.article>
+                ))}
+              </div>
+            </section>
+          );
+        })()}
+
+        {/* COMBINED PERSPECTIVE — bridges top 1 + top 2 */}
+        {insight?.combined && ranked.length > 1 && (
+          <section data-pdf-section className="lass-fade-up-4 rounded-2xl border border-[hsl(var(--brand-red))]/25 bg-gradient-to-br from-[hsl(var(--brand-blue))]/5 to-[hsl(var(--brand-red))]/5 p-6 shadow-card">
+            <div className="mb-2 flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[hsl(var(--brand-blue))]">
+              <Sparkles className="h-3.5 w-3.5" /> Combined perspective
+              <span className="text-muted-foreground/80 normal-case tracking-normal font-normal">
+                · {ranked[0].cluster.name} × {ranked[1].cluster.name}
+              </span>
+            </div>
+            <p className="font-serif-display text-base leading-relaxed text-foreground/90">{insight.combined}</p>
+          </section>
+        )}
+
         {insight?.overview && (
           <section data-pdf-section className="lass-fade-up-4 rounded-2xl border border-[hsl(var(--brand-blue))]/25 bg-[hsl(var(--brand-blue))]/5 p-6 shadow-card">
             <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[hsl(var(--brand-blue))]"><Sparkles className="h-3.5 w-3.5" /> Personalised summary</div>
