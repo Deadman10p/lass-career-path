@@ -96,9 +96,11 @@ The student gave ${(answers ?? []).length} ratings across the inventory.
 
 Return ONLY this JSON shape:
 {
-  "overview": "3-4 sentence personalised opening — name the dominant pattern, what it suggests about how the student moves through the world, and a small honest tension or edge to watch. ~70–110 words.",
+  "overview": "3-4 sentence personalised opening focused on the #1 cluster — name the dominant pattern, what it suggests about how the student moves through the world, and a small honest tension or edge to watch. ~70–110 words.",
+  "combined": "A separate 4-6 sentence reflection (~110–160 words) that INTEGRATES the #1 and #2 clusters into a broader perspective. Treat the secondary category as a real, weighted part of who the student is — not an afterthought. Show how the two strengths reinforce, complicate, or expand each other, and what kinds of paths/roles/situations sit at their intersection. Be concrete. Second person. Mention both cluster names naturally.",
   "by_cluster": { "<clusterId>": { "<Label>": "personalised, observant text" } }
 }
+Fill by_cluster for ALL top clusters provided (the #2 cluster matters as much as #1 for the broader picture).
 Use EXACTLY the labels provided per cluster. If a label is generic (e.g. "Strengths"), interpret it through this inventory's lens.
 If a label is unusual (e.g. "Communication Style", "Greatest Fear", "Famous Examples"), respect its intent literally.
 Never repeat the cluster name as filler. Never start two entries with the same word.`;
